@@ -1,10 +1,17 @@
 -- ==========================================
--- ♻️ KW Cashier - Server Hop + Auto Loop
--- الرابط: https://raw.githubusercontent.com/G7R-wq/weqe3/refs/heads/main/seer2
+-- ♻️ KW Cashier - Auto Loop (تلقائي 100%)
+-- يشتغل أول ما تحمل السكربت
 -- ==========================================
 
--- ⚠️ الرابط الصحيح للسكربت (Raw)
+-- ⚠️ رابط السكربت (نفسه)
 local SCRIPT_URL = "https://raw.githubusercontent.com/G7R-wq/weqe3/refs/heads/main/seer2"
+
+-- ⚙️ الإعدادات
+local CONFIG = {
+    AutoStart = true,          -- ✅ يبدأ تلقائياً
+    WaitBetweenServers = 5,    -- ثواني انتظار قبل الهوب
+    MaxLoops = 999,            -- عدد التكرارات (999 = لا نهائي)
+}
 
 local LP = game:GetService("Players").LocalPlayer
 local PG = LP:WaitForChild("PlayerGui")
@@ -13,6 +20,8 @@ local TS = game:GetService("TeleportService")
 
 local CASHIER_POS = Vector3.new(-949.93, 3.74, -285.25)
 local isRunning = false
+local currentLoop = 0
+local stopRequested = false
 
 -- ═══ Instant Prompt Engine ═══
 local function makeInstant(p)
@@ -31,7 +40,7 @@ end)
 
 -- ═══ الواجهة ═══
 local SG = Instance.new("ScreenGui")
-SG.Name = "KWHop"
+SG.Name = "KWAuto"
 SG.ResetOnSpawn = false
 SG.DisplayOrder = 999999
 SG.Parent = PG
@@ -39,7 +48,7 @@ SG.Parent = PG
 local Btn = Instance.new("TextButton")
 Btn.Size = UDim2.new(0, 55, 0, 55)
 Btn.Position = UDim2.new(0, 15, 0, 130)
-Btn.BackgroundColor3 = Color3.fromRGB(220, 60, 120)
+Btn.BackgroundColor3 = Color3.fromRGB(50, 200, 120)
 Btn.Text = "♻️"
 Btn.TextSize = 26
 Btn.TextColor3 = Color3.new(1,1,1)
@@ -48,8 +57,8 @@ Btn.Parent = SG
 Instance.new("UICorner", Btn).CornerRadius = UDim.new(1,0)
 
 local F = Instance.new("Frame")
-F.Size = UDim2.new(0, 300, 0, 440)
-F.Position = UDim2.new(0.5, -150, 0.5, -220)
+F.Size = UDim2.new(0, 300, 0, 400)
+F.Position = UDim2.new(0.5, -150, 0.5, -200)
 F.BackgroundColor3 = Color3.fromRGB(18, 20, 28)
 F.Visible = false
 F.Parent = SG
@@ -59,49 +68,51 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -50, 0, 35)
 Title.Position = UDim2.new(0, 12, 0, 5)
 Title.BackgroundTransparency = 1
-Title.Text = "♻️ KW Server Hop"
+Title.Text = "♻️ Auto Loop"
 Title.TextColor3 = Color3.new(1,1,1)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 13
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = F
 
-local XBtn = Instance.new("TextButton")
-XBtn.Size = UDim2.new(0, 28, 0, 28)
-XBtn.Position = UDim2.new(1, -34, 0, 7)
-XBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
-XBtn.Text = "✕"
-XBtn.TextColor3 = Color3.new(1,1,1)
-XBtn.Font = Enum.Font.GothamBold
-XBtn.Parent = F
-Instance.new("UICorner", XBtn).CornerRadius = UDim.new(0, 6)
+local Status = Instance.new("TextLabel")
+Status.Size = UDim2.new(1, -20, 0, 24)
+Status.Position = UDim2.new(0, 10, 0, 42)
+Status.BackgroundColor3 = Color3.fromRGB(30, 32, 42)
+Status.Text = "⚪ جاهز"
+Status.TextColor3 = Color3.fromRGB(200, 200, 220)
+Status.Font = Enum.Font.GothamBold
+Status.TextSize = 11
+Status.TextXAlignment = Enum.TextXAlignment.Center
+Status.Parent = F
+Instance.new("UICorner", Status).CornerRadius = UDim.new(0, 6)
+
+local LoopLabel = Instance.new("TextLabel")
+LoopLabel.Size = UDim2.new(1, -20, 0, 20)
+LoopLabel.Position = UDim2.new(0, 10, 0, 68)
+LoopLabel.BackgroundTransparency = 1
+LoopLabel.Text = "الدورة: 0"
+LoopLabel.TextColor3 = Color3.fromRGB(180, 200, 255)
+LoopLabel.Font = Enum.Font.GothamBold
+LoopLabel.TextSize = 11
+LoopLabel.TextXAlignment = Enum.TextXAlignment.Center
+LoopLabel.Parent = F
 
 local StartBtn = Instance.new("TextButton")
-StartBtn.Size = UDim2.new(1, -20, 0, 50)
-StartBtn.Position = UDim2.new(0, 10, 0, 42)
+StartBtn.Size = UDim2.new(1, -20, 0, 40)
+StartBtn.Position = UDim2.new(0, 10, 0, 92)
 StartBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 90)
-StartBtn.Text = "▶️ ابدأ (شراء + سرقة + هوب)"
+StartBtn.Text = "▶️ ابدأ"
 StartBtn.TextColor3 = Color3.new(1,1,1)
 StartBtn.Font = Enum.Font.GothamBold
 StartBtn.TextSize = 12
 StartBtn.Parent = F
-Instance.new("UICorner", StartBtn).CornerRadius = UDim.new(0, 10)
-
-local HopBtn = Instance.new("TextButton")
-HopBtn.Size = UDim2.new(1, -20, 0, 42)
-HopBtn.Position = UDim2.new(0, 10, 0, 98)
-HopBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 120)
-HopBtn.Text = "🌐 انتقل لسيرفر ثاني فقط"
-HopBtn.TextColor3 = Color3.new(1,1,1)
-HopBtn.Font = Enum.Font.GothamBold
-HopBtn.TextSize = 12
-HopBtn.Parent = F
-Instance.new("UICorner", HopBtn).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", StartBtn).CornerRadius = UDim.new(0, 8)
 
 local StopBtn = Instance.new("TextButton")
 StopBtn.Size = UDim2.new(1, -20, 0, 36)
-StopBtn.Position = UDim2.new(0, 10, 0, 146)
-StopBtn.BackgroundColor3 = Color3.fromRGB(120, 40, 50)
+StopBtn.Position = UDim2.new(0, 10, 0, 138)
+StopBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 StopBtn.Text = "⏹️ إيقاف"
 StopBtn.TextColor3 = Color3.new(1,1,1)
 StopBtn.Font = Enum.Font.GothamBold
@@ -110,8 +121,8 @@ StopBtn.Parent = F
 Instance.new("UICorner", StopBtn).CornerRadius = UDim.new(0, 8)
 
 local Log = Instance.new("TextLabel")
-Log.Size = UDim2.new(1, -20, 0, 240)
-Log.Position = UDim2.new(0, 10, 0, 188)
+Log.Size = UDim2.new(1, -20, 0, 200)
+Log.Position = UDim2.new(0, 10, 0, 182)
 Log.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
 Log.Text = "✦ جاهز"
 Log.TextColor3 = Color3.fromRGB(180, 220, 255)
@@ -126,14 +137,14 @@ Instance.new("UICorner", Log).CornerRadius = UDim.new(0, 8)
 local logs = {}
 local function log(m)
     table.insert(logs, m)
-    if #logs > 18 then table.remove(logs, 1) end
+    if #logs > 15 then table.remove(logs, 1) end
     Log.Text = table.concat(logs, "\n")
     print("[KW] " .. m)
 end
 local function clearLog() logs = {}; Log.Text = "" end
+local function setStatus(txt) Status.Text = txt end
 
 Btn.MouseButton1Click:Connect(function() F.Visible = not F.Visible end)
-XBtn.MouseButton1Click:Connect(function() F.Visible = false end)
 
 -- ═══ Helpers ═══
 local function getHRP()
@@ -216,6 +227,8 @@ end
 -- ═══ شراء ═══
 local function buy()
     log("💰 شراء...")
+    setStatus("💰 شراء...")
+    
     if hasTool() then log("✅ عندك الأداة"); return true end
     
     local seller = workspace:FindFirstChild("SellerNPC", true)
@@ -243,6 +256,7 @@ local function buy()
     
     local market, opened = nil, false
     for i = 1, 20 do
+        if stopRequested then return false end
         market = PG:FindFirstChild("Market")
         if market then
             local mf = market:FindFirstChild("MainFrame")
@@ -303,6 +317,7 @@ end
 -- ═══ سرقة ═══
 local function rob()
     log("🏧 سرقة...")
+    setStatus("🏧 سرقة...")
     
     local tool = hasTool()
     if tool and LP.Character then
@@ -358,6 +373,7 @@ local function rob()
     
     local uiBtn = nil
     for i = 1, 20 do
+        if stopRequested then return false end
         pcall(function()
             local cam = workspace.CurrentCamera
             if cam then
@@ -380,6 +396,7 @@ local function rob()
         task.wait(0.1)
     end
     
+    -- ضغط
     pcall(function() fireproximityprompt(prompt) end)
     pcall(function()
         VIM:SendKeyEvent(true, Enum.KeyCode.E, false, game)
@@ -413,6 +430,7 @@ local function rob()
     
     local startT = tick()
     while tick() - startT < 5 do
+        if stopRequested then break end
         pcall(function()
             local cam = workspace.CurrentCamera
             if cam then
@@ -430,61 +448,52 @@ local function rob()
 end
 
 -- ═══════════════════════════════════════
--- 🌐 SERVER HOP (معدل)
+-- 🌐 SERVER HOP
 -- ═══════════════════════════════════════
 local function hopServer()
     log("🌐 ننتقل لسيرفر ثاني...")
+    setStatus("🌐 Server Hop...")
     
-    -- ✅ نحفظ السكربت عشان يشتغل بعد الانتقال
+    -- نحفظ السكربت
     local queueCode = string.format([[
         wait(5)
         local url = "%s"
-        local ok, script = pcall(function()
+        local ok, s = pcall(function()
             return game:HttpGet(url)
         end)
-        if ok and script then
-            loadstring(script)()
+        if ok and s then
+            loadstring(s)()
         end
     ]], SCRIPT_URL)
     
     local saved = false
-    
-    -- طريقة 1
     pcall(function()
         if queue_on_teleport then
             queue_on_teleport(queueCode)
             saved = true
-            log("✅ محفوظ (queue_on_teleport)")
         end
     end)
-    
-    -- طريقة 2
     if not saved then
         pcall(function()
             if syn and syn.queue_on_teleport then
                 syn.queue_on_teleport(queueCode)
                 saved = true
-                log("✅ محفوظ (syn)")
             end
         end)
     end
-    
-    -- طريقة 3
     if not saved then
         pcall(function()
             if fluxus and fluxus.queue_on_teleport then
                 fluxus.queue_on_teleport(queueCode)
                 saved = true
-                log("✅ محفوظ (fluxus)")
             end
         end)
     end
     
-    if not saved then
-        log("⚠️ الـ Executor ما يدعم الحفظ التلقائي")
-    end
+    if saved then log("✅ حفظنا السكربت")
+    else log("⚠️ ما قدرنا نحفظ") end
     
-    -- ✅ ننتقل باستخدام GetPublicServersAsync (أفضل من Teleport عادي)
+    -- ننتقل
     task.wait(1)
     
     local servers = {}
@@ -501,73 +510,102 @@ local function hopServer()
         end
     end
     
-    log("📊 سيرفرات متاحة: " .. #available)
-    
     if #available > 0 then
         local pick = available[math.random(1, #available)]
-        log("🎯 اخترنا: " .. pick.id:sub(1, 8))
-        log("👥 " .. pick.playing .. "/" .. pick.maxPlayers)
-        
-        local ok = pcall(function()
+        log("🎯 " .. pick.id:sub(1, 8) .. " (" .. pick.playing .. "/" .. pick.maxPlayers .. ")")
+        pcall(function()
             TS:TeleportToPlaceInstance(game.PlaceId, pick.id)
         end)
-        
-        if ok then
-            log("🚀 تم!")
-        else
-            log("❌ فشل - نجرب Teleport عادي")
-            pcall(function() TS:Teleport(game.PlaceId) end)
-        end
     else
-        log("⚠️ ما فيه سيرفرات - نجرب Teleport عادي")
-        pcall(function()
-            TS:Teleport(game.PlaceId)
-        end)
+        pcall(function() TS:Teleport(game.PlaceId) end)
     end
+    
+    log("🚀 تم!")
 end
 
 -- ═══════════════════════════════════════
--- 🚀 التشغيل
+-- ♻️ AUTO LOOP (الدورة الكاملة)
 -- ═══════════════════════════════════════
-local function runAll()
+local function autoLoop()
     if isRunning then return end
     isRunning = true
-    clearLog()
-    log("⚡ بدء")
+    stopRequested = false
+    
+    log("♻️ بدء الدورة التلقائية")
     
     task.spawn(function()
-        if not hasTool() then buy() end
-        if hasTool() then
-            task.wait(0.3)
-            rob()
+        while not stopRequested do
+            currentLoop = currentLoop + 1
+            LoopLabel.Text = "الدورة: " .. currentLoop
+            
+            log("")
+            log("━━━ دورة #" .. currentLoop .. " ━━━")
+            
+            -- 1. انتظر الشخصية تحمل
+            log("⏳ انتظار التحميل...")
+            repeat
+                task.wait(0.5)
+            until LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") or stopRequested
+            
+            task.wait(2)
+            
+            -- 2. شراء
+            if not hasTool() then
+                buy()
+                task.wait(1)
+            end
+            
+            -- 3. سرقة
+            if hasTool() then
+                rob()
+            else
+                log("⚠️ ما عندك الأداة - نتخطى السرقة")
+            end
+            
+            -- 4. انتظار قبل الهوب
+            log("⏳ انتظار " .. CONFIG.WaitBetweenServers .. " ثواني...")
+            for i = 1, CONFIG.WaitBetweenServers do
+                if stopRequested then break end
+                task.wait(1)
+            end
+            
+            -- 5. سيرفر هوب
+            if not stopRequested then
+                hopServer()
+                -- ما راح يكمل بعد هذا لأن اللعبة تنقل
+                task.wait(10)
+            end
         end
         
-        task.wait(2)
-        log("")
-        log("━━━ خلصنا - ننتقل ━━━")
-        hopServer()
         isRunning = false
+        setStatus("⏹️ متوقف")
     end)
 end
 
+-- ═══ ربط ═══
 StartBtn.MouseButton1Click:Connect(function()
     if isRunning then return end
     StartBtn.Text = "⏳..."
-    task.spawn(function()
-        pcall(runAll)
-        StartBtn.Text = "▶️ ابدأ (شراء + سرقة + هوب)"
-    end)
-end)
-
-HopBtn.MouseButton1Click:Connect(function()
-    task.spawn(hopServer)
+    autoLoop()
+    task.wait(0.5)
+    StartBtn.Text = "▶️ ابدأ"
 end)
 
 StopBtn.MouseButton1Click:Connect(function()
+    stopRequested = true
     isRunning = false
+    setStatus("⏹️ تم الإيقاف")
     log("⏹️ إيقاف")
 end)
 
-log("✦ جاهز")
-log("→ الرابط: " .. SCRIPT_URL:sub(1, 50) .. "...")
-print("[KWHop] ✅ Loaded")
+-- ═══════════════════════════════════════
+-- ✅ AUTO START - يبدأ تلقائياً
+-- ═══════════════════════════════════════
+if CONFIG.AutoStart then
+    task.wait(3)  -- ننتظر تحميل اللعبة
+    log("♻️ Auto-Start!")
+    setStatus("♻️ يعمل تلقائياً")
+    autoLoop()
+end
+
+print("[KWAuto] ✅ Loaded + Auto-Start")
