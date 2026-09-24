@@ -3,7 +3,7 @@
 -- ==========================================
 
 -- ⚠️ ضع رابط السكربت الـ Raw هنا
-local SCRIPT_URL = "https://pastebin.com/raw/XXXXXXXX"
+local SCRIPT_URL = "https://raw.githubusercontent.com/G7R-wq/weqe3/refs/heads/main/seer2"
 
 local LP = game:GetService("Players").LocalPlayer
 local PG = LP:WaitForChild("PlayerGui")
