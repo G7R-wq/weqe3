@@ -1,0 +1,532 @@
+-- ==========================================
+-- ♻️ KW Cashier - Server Hop + Auto Loop
+-- ==========================================
+
+-- ⚠️ ضع رابط السكربت الـ Raw هنا
+local SCRIPT_URL = "https://pastebin.com/raw/XXXXXXXX"
+
+local LP = game:GetService("Players").LocalPlayer
+local PG = LP:WaitForChild("PlayerGui")
+local VIM = game:GetService("VirtualInputManager")
+local TS = game:GetService("TeleportService")
+
+local CASHIER_POS = Vector3.new(-949.93, 3.74, -285.25)
+local isRunning = false
+
+-- ═══ Instant Prompt Engine ═══
+local function makeInstant(p)
+    if p and p:IsA("ProximityPrompt") then
+        pcall(function()
+            p.HoldDuration = 0
+            p.RequiresLineOfSight = false
+            p.MaxActivationDistance = 99999
+        end)
+    end
+end
+for _, p in ipairs(workspace:GetDescendants()) do makeInstant(p) end
+workspace.DescendantAdded:Connect(function(c)
+    if c:IsA("ProximityPrompt") then task.wait(0.05) makeInstant(c) end
+end)
+
+-- ═══ الواجهة ═══
+local SG = Instance.new("ScreenGui")
+SG.Name = "KWHop"
+SG.ResetOnSpawn = false
+SG.DisplayOrder = 999999
+SG.Parent = PG
+
+local Btn = Instance.new("TextButton")
+Btn.Size = UDim2.new(0, 55, 0, 55)
+Btn.Position = UDim2.new(0, 15, 0, 130)
+Btn.BackgroundColor3 = Color3.fromRGB(220, 60, 120)
+Btn.Text = "♻️"
+Btn.TextSize = 26
+Btn.TextColor3 = Color3.new(1,1,1)
+Btn.Font = Enum.Font.GothamBold
+Btn.Parent = SG
+Instance.new("UICorner", Btn).CornerRadius = UDim.new(1,0)
+
+local F = Instance.new("Frame")
+F.Size = UDim2.new(0, 300, 0, 440)
+F.Position = UDim2.new(0.5, -150, 0.5, -220)
+F.BackgroundColor3 = Color3.fromRGB(18, 20, 28)
+F.Visible = false
+F.Parent = SG
+Instance.new("UICorner", F).CornerRadius = UDim.new(0, 14)
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -50, 0, 35)
+Title.Position = UDim2.new(0, 12, 0, 5)
+Title.BackgroundTransparency = 1
+Title.Text = "♻️ KW Server Hop"
+Title.TextColor3 = Color3.new(1,1,1)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 13
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = F
+
+local XBtn = Instance.new("TextButton")
+XBtn.Size = UDim2.new(0, 28, 0, 28)
+XBtn.Position = UDim2.new(1, -34, 0, 7)
+XBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+XBtn.Text = "✕"
+XBtn.TextColor3 = Color3.new(1,1,1)
+XBtn.Font = Enum.Font.GothamBold
+XBtn.Parent = F
+Instance.new("UICorner", XBtn).CornerRadius = UDim.new(0, 6)
+
+local StartBtn = Instance.new("TextButton")
+StartBtn.Size = UDim2.new(1, -20, 0, 50)
+StartBtn.Position = UDim2.new(0, 10, 0, 42)
+StartBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 90)
+StartBtn.Text = "▶️ ابدأ (شراء + سرقة + هوب)"
+StartBtn.TextColor3 = Color3.new(1,1,1)
+StartBtn.Font = Enum.Font.GothamBold
+StartBtn.TextSize = 12
+StartBtn.Parent = F
+Instance.new("UICorner", StartBtn).CornerRadius = UDim.new(0, 10)
+
+local HopBtn = Instance.new("TextButton")
+HopBtn.Size = UDim2.new(1, -20, 0, 42)
+HopBtn.Position = UDim2.new(0, 10, 0, 98)
+HopBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 120)
+HopBtn.Text = "🌐 انتقل لسيرفر ثاني فقط"
+HopBtn.TextColor3 = Color3.new(1,1,1)
+HopBtn.Font = Enum.Font.GothamBold
+HopBtn.TextSize = 12
+HopBtn.Parent = F
+Instance.new("UICorner", HopBtn).CornerRadius = UDim.new(0, 10)
+
+local StopBtn = Instance.new("TextButton")
+StopBtn.Size = UDim2.new(1, -20, 0, 36)
+StopBtn.Position = UDim2.new(0, 10, 0, 146)
+StopBtn.BackgroundColor3 = Color3.fromRGB(120, 40, 50)
+StopBtn.Text = "⏹️ إيقاف"
+StopBtn.TextColor3 = Color3.new(1,1,1)
+StopBtn.Font = Enum.Font.GothamBold
+StopBtn.TextSize = 11
+StopBtn.Parent = F
+Instance.new("UICorner", StopBtn).CornerRadius = UDim.new(0, 8)
+
+local Log = Instance.new("TextLabel")
+Log.Size = UDim2.new(1, -20, 0, 240)
+Log.Position = UDim2.new(0, 10, 0, 188)
+Log.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
+Log.Text = "✦ جاهز"
+Log.TextColor3 = Color3.fromRGB(180, 220, 255)
+Log.Font = Enum.Font.Code
+Log.TextSize = 10
+Log.TextWrapped = true
+Log.TextYAlignment = Enum.TextYAlignment.Top
+Log.TextXAlignment = Enum.TextXAlignment.Left
+Log.Parent = F
+Instance.new("UICorner", Log).CornerRadius = UDim.new(0, 8)
+
+local logs = {}
+local function log(m)
+    table.insert(logs, m)
+    if #logs > 18 then table.remove(logs, 1) end
+    Log.Text = table.concat(logs, "\n")
+    print("[KW] " .. m)
+end
+local function clearLog() logs = {}; Log.Text = "" end
+
+Btn.MouseButton1Click:Connect(function() F.Visible = not F.Visible end)
+XBtn.MouseButton1Click:Connect(function() F.Visible = false end)
+
+-- ═══ Helpers ═══
+local function getHRP()
+    return LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+end
+
+local function hasTool()
+    local keys = {"فاتح", "متقدم", "advanced", "lockpick"}
+    local function chk(n)
+        local x = n:lower()
+        for _, k in ipairs(keys) do 
+            if x:find(k:lower()) then return true end 
+        end
+        return false
+    end
+    if LP.Character then
+        for _, t in ipairs(LP.Character:GetChildren()) do
+            if t:IsA("Tool") and chk(t.Name) then return t end
+        end
+    end
+    local bp = LP:FindFirstChild("Backpack")
+    if bp then
+        for _, t in ipairs(bp:GetChildren()) do
+            if t:IsA("Tool") and chk(t.Name) then return t end
+        end
+    end
+    return nil
+end
+
+local function clickGui(g)
+    if not g then return false end
+    local clicked = false
+    pcall(function()
+        if getconnections then
+            for _, c in pairs(getconnections(g.MouseButton1Click)) do
+                if c.Function then task.spawn(c.Function); clicked = true end
+            end
+            for _, c in pairs(getconnections(g.MouseButton1Down)) do
+                if c.Function then task.spawn(c.Function); clicked = true end
+            end
+            for _, c in pairs(getconnections(g.InputBegan)) do
+                if c.Function then 
+                    task.spawn(c.Function, {UserInputType = Enum.UserInputType.Touch})
+                    clicked = true 
+                end
+            end
+            for _, c in pairs(getconnections(g.Activated)) do
+                if c.Function then task.spawn(c.Function); clicked = true end
+            end
+        end
+    end)
+    pcall(function() g:Activate() end)
+    pcall(function()
+        local ap = g.AbsolutePosition
+        local as = g.AbsoluteSize
+        if as.X > 5 and ap.X > 0 then
+            local cx = ap.X + as.X/2
+            local cy = ap.Y + as.Y/2
+            VIM:SendMouseButtonEvent(cx, cy, 0, true, game, 1)
+            task.wait(0.03)
+            VIM:SendMouseButtonEvent(cx, cy, 0, false, game, 1)
+            clicked = true
+        end
+    end)
+    return clicked
+end
+
+local function findBtn(root, names)
+    if not root then return nil end
+    for _, obj in ipairs(root:GetDescendants()) do
+        if obj:IsA("TextButton") or obj:IsA("ImageButton") then
+            for _, n in ipairs(names) do
+                if obj.Name:lower() == n:lower() then return obj end
+            end
+        end
+    end
+    return nil
+end
+
+-- ═══ شراء (مختصر) ═══
+local function buy()
+    log("💰 شراء...")
+    if hasTool() then log("✅ عندك الأداة"); return true end
+    
+    local seller = workspace:FindFirstChild("SellerNPC", true)
+    if not seller then log("❌ ما فيه بائع"); return false end
+    
+    local part = seller:IsA("BasePart") and seller or seller:FindFirstChildWhichIsA("BasePart", true)
+    if part then
+        local hrp = getHRP()
+        if hrp then
+            hrp.CFrame = CFrame.new(part.Position + Vector3.new(0, 3, 3))
+        end
+        task.wait(0.5)
+    end
+    
+    local p = seller:FindFirstChildWhichIsA("ProximityPrompt", true)
+    if p then
+        pcall(function()
+            p.HoldDuration = 0
+            p.RequiresLineOfSight = false
+            p.MaxActivationDistance = 99999
+            p.Enabled = true
+            fireproximityprompt(p)
+        end)
+    end
+    
+    local market, opened = nil, false
+    for i = 1, 20 do
+        market = PG:FindFirstChild("Market")
+        if market then
+            local mf = market:FindFirstChild("MainFrame")
+            if mf and mf.Visible then opened = true; break end
+        end
+        task.wait(0.1)
+    end
+    if not opened then log("❌ Market ما فتح"); return false end
+    log("✅ Market فتح")
+    task.wait(0.6)
+    
+    local mf = market:FindFirstChild("MainFrame")
+    local list = mf:FindFirstChild("ItemsList")
+    if not list then return false end
+    
+    local target = nil
+    for _, item in ipairs(list:GetChildren()) do
+        if item:IsA("GuiObject") then
+            local txt = ""
+            for _, d in ipairs(item:GetDescendants()) do
+                if d:IsA("TextLabel") then
+                    local t = ""
+                    pcall(function() t = d.Text end)
+                    if t ~= "" then txt = txt .. " " .. t end
+                end
+            end
+            local low = txt:lower()
+            if low:find("lockpick") or low:find("advanced") or low:find("متقدم") or
+               (low:find("فاتح") and (low:find("قفل") or low:find("اقفال"))) then
+                target = item
+                break
+            end
+        end
+    end
+    if not target then return false end
+    
+    local addBtn = nil
+    for _, d in ipairs(target:GetDescendants()) do
+        if (d:IsA("TextButton") or d:IsA("ImageButton")) and 
+           (d.Name == "Click" or d.Name == "AddToCart" or d.Name == "Add") then
+            addBtn = d; break
+        end
+    end
+    if addBtn then clickGui(addBtn); task.wait(0.7) end
+    
+    local cart = mf:FindFirstChild("Cart")
+    if cart then
+        local buyFrame = cart:FindFirstChild("Buy")
+        local buyBtn = buyFrame and (findBtn(buyFrame, {"Click","Buy"}) or buyFrame) or findBtn(cart, {"Buy","Click"})
+        if buyBtn then clickGui(buyBtn); task.wait(0.7) end
+    end
+    
+    task.wait(0.6)
+    if hasTool() then log("🎉 وصلت!"); return true end
+    return false
+end
+
+-- ═══ سرقة (مختصر) ═══
+local function rob()
+    log("🏧 سرقة...")
+    
+    local tool = hasTool()
+    if tool and LP.Character then
+        local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum:EquipTool(tool) end
+    end
+    task.wait(0.2)
+    
+    local prompt, robPos = nil, CASHIER_POS
+    for _, p in ipairs(workspace:GetDescendants()) do
+        if p:IsA("ProximityPrompt") and p.Name == "StartProximity" then
+            prompt = p
+            local parent = p.Parent
+            local main = parent:FindFirstChild("MainCashier")
+            if main and main:IsA("BasePart") then
+                robPos = main.Position
+            elseif parent:IsA("BasePart") then
+                robPos = parent.Position
+            end
+            break
+        end
+    end
+    if not prompt then log("❌ ما فيه Prompt"); return false end
+    
+    -- انتقل + كاميرا
+    local hrp = getHRP()
+    if hrp then
+        hrp.CFrame = CFrame.new(robPos + Vector3.new(0, 2.5, 2))
+        hrp.AssemblyLinearVelocity = Vector3.zero
+    end
+    task.wait(0.3)
+    
+    pcall(function()
+        local cam = workspace.CurrentCamera
+        if cam then
+            cam.CameraType = Enum.CameraType.Custom
+            cam.CFrame = CFrame.lookAt(
+                robPos + Vector3.new(0, 3.5, 5),
+                robPos + Vector3.new(0, 1.2, 0)
+            )
+            cam.Focus = CFrame.new(robPos + Vector3.new(0, 1.2, 0))
+        end
+    end)
+    task.wait(0.3)
+    
+    pcall(function()
+        prompt.HoldDuration = 0
+        prompt.RequiresLineOfSight = false
+        prompt.MaxActivationDistance = 99999
+        prompt.Enabled = true
+    end)
+    
+    if not prompt.Enabled then log("⚠️ مقفل"); return false end
+    
+    -- ننتظر الزر + نعيد الكاميرا
+    local uiBtn = nil
+    for i = 1, 20 do
+        pcall(function()
+            local cam = workspace.CurrentCamera
+            if cam then
+                cam.CFrame = CFrame.lookAt(
+                    robPos + Vector3.new(0, 3.5, 5),
+                    robPos + Vector3.new(0, 1.2, 0)
+                )
+            end
+        end)
+        
+        local pgui = PG:FindFirstChild("ProximityPrompts")
+        if pgui then
+            for _, obj in ipairs(pgui:GetDescendants()) do
+                if (obj:IsA("TextButton") or obj:IsA("ImageButton")) and obj.AbsoluteSize.X > 30 then
+                    uiBtn = obj; break
+                end
+            end
+        end
+        if uiBtn then break end
+        task.wait(0.1)
+    end
+    
+    -- ضغط
+    pcall(function() fireproximityprompt(prompt) end)
+    pcall(function()
+        VIM:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+        task.wait(0.05)
+        VIM:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+    end)
+    
+    if uiBtn then
+        local ap = uiBtn.AbsolutePosition
+        local as = uiBtn.AbsoluteSize
+        local cx = ap.X + as.X/2
+        local cy = ap.Y + as.Y/2
+        pcall(function()
+            VIM:SendMouseButtonEvent(cx, cy, 0, true, game, 1)
+            task.wait(0.2)
+            VIM:SendMouseButtonEvent(cx, cy, 0, false, game, 1)
+        end)
+        pcall(function()
+            for _, c in pairs(getconnections(uiBtn.InputBegan)) do
+                if c.Function then
+                    task.spawn(c.Function, {
+                        UserInputType = Enum.UserInputType.Touch,
+                        UserInputState = Enum.UserInputState.Begin,
+                        Position = Vector3.new(cx, cy, 0),
+                    })
+                end
+            end
+        end)
+        pcall(function() uiBtn:Activate() end)
+    end
+    
+    -- ننتظر + نعيد الكاميرا عشان الزر
+    local startT = tick()
+    while tick() - startT < 5 do
+        pcall(function()
+            local cam = workspace.CurrentCamera
+            if cam then
+                cam.CFrame = CFrame.lookAt(
+                    robPos + Vector3.new(0, 3.5, 5),
+                    robPos + Vector3.new(0, 1.2, 0)
+                )
+            end
+        end)
+        task.wait(0.15)
+    end
+    
+    log("🎉 خلصت السرقة")
+    return true
+end
+
+-- ═══════════════════════════════════════
+-- 🌐 SERVER HOP
+-- ═══════════════════════════════════════
+local function hopServer()
+    log("🌐 ننتقل لسيرفر ثاني...")
+    
+    -- ✅ نحفظ السكربت عشان يشتغل بعد الانتقال
+    local success = false
+    pcall(function()
+        if queue_on_teleport then
+            queue_on_teleport([[
+                -- بعد الانتقال، نشغل السكربت من الرابط
+                wait(3)
+                local url = "]] .. SCRIPT_URL .. [["
+                local ok, script = pcall(function()
+                    return game:HttpGet(url)
+                end)
+                if ok and script then
+                    loadstring(script)()
+                end
+            ]])
+            success = true
+        elseif syn and syn.queue_on_teleport then
+            syn.queue_on_teleport([[
+                wait(3)
+                local url = "]] .. SCRIPT_URL .. [["
+                local ok, script = pcall(function()
+                    return game:HttpGet(url)
+                end)
+                if ok and script then
+                    loadstring(script)()
+                end
+            ]])
+            success = true
+        end
+    end)
+    
+    if success then
+        log("✅ حفظنا السكربت للانتقال")
+    else
+        log("⚠️ queue_on_teleport غير مدعوم")
+    end
+    
+    -- ✅ ننتقل
+    task.wait(1)
+    pcall(function()
+        local TS = game:GetService("TeleportService")
+        TS:Teleport(game.PlaceId)
+    end)
+    
+    log("🚀 تم الانتقال")
+end
+
+-- ═══════════════════════════════════════
+-- 🚀 التشغيل
+-- ═══════════════════════════════════════
+local function runAll()
+    if isRunning then return end
+    isRunning = true
+    clearLog()
+    log("⚡ بدء")
+    
+    task.spawn(function()
+        if not hasTool() then buy() end
+        if hasTool() then
+            task.wait(0.3)
+            rob()
+        end
+        
+        task.wait(2)
+        log("")
+        log("━━━ خلصنا - ننتقل ━━━")
+        hopServer()
+        isRunning = false
+    end)
+end
+
+StartBtn.MouseButton1Click:Connect(function()
+    if isRunning then return end
+    StartBtn.Text = "⏳..."
+    task.spawn(function()
+        pcall(runAll)
+        StartBtn.Text = "▶️ ابدأ (شراء + سرقة + هوب)"
+    end)
+end)
+
+HopBtn.MouseButton1Click:Connect(function()
+    task.spawn(hopServer)
+end)
+
+StopBtn.MouseButton1Click:Connect(function()
+    isRunning = false
+    log("⏹️ إيقاف")
+end)
+
+log("✦ جاهز - ارفع السكربت على Pastebin")
+log("→ وضع الرابط في SCRIPT_URL")
+print("[KWHop] ✅ Loaded")
