@@ -1,12 +1,12 @@
 -- ==========================================
--- ✨ KW Auto Loop - مع تجميد الجسم
+-- ✨ KW Auto Loop - انتظار 23 ثانية
 -- ==========================================
 
 local SCRIPT_URL = "https://raw.githubusercontent.com/G7R-wq/weqe3/refs/heads/main/seer2"
 
 local CONFIG = {
     AutoStart = true,
-    StartDelay = 5,
+    StartDelay = 23,          -- ⏱️ 23 ثانية (جديد)
     WaitBetweenServers = 5,
     MaxPlayersInServer = 3,
     PreferEmpty = true,
@@ -19,7 +19,6 @@ local PG = LP:WaitForChild("PlayerGui")
 local VIM = game:GetService("VirtualInputManager")
 local TS = game:GetService("TeleportService")
 local TweenService = game:GetService("TweenService")
-local RS = game:GetService("RunService")
 
 local CASHIER_POS = Vector3.new(-949.93, 3.74, -285.25)
 local isRunning = false
@@ -42,12 +41,9 @@ workspace.DescendantAdded:Connect(function(c)
     if c:IsA("ProximityPrompt") then task.wait(0.05) makeInstant(c) end
 end)
 
--- ══════════════════════════════════════════
--- 🧊 نظام التجميد
--- ══════════════════════════════════════════
+-- ═══ التجميد ═══
 local function freezeCharacter()
     if not CONFIG.FreezeCharacter then return end
-    
     local char = LP.Character
     if not char then return end
     
@@ -68,17 +64,14 @@ end
 
 local function unfreezeCharacter()
     if not isFrozen then return end
-    
     local char = LP.Character
     if not char then return end
     
     local hrp = char:FindFirstChild("HumanoidRootPart")
     local hum = char:FindFirstChildOfClass("Humanoid")
     
-    if hrp then
-        pcall(function() hrp.Anchored = false end)
-    end
-    if hum then
+    if hrp then pcall(function() hrp.Anchored = false end) end
+    if hum then 
         pcall(function()
             hum.WalkSpeed = 16
             hum.JumpPower = 50
@@ -87,7 +80,7 @@ local function unfreezeCharacter()
     isFrozen = false
 end
 
--- ═══ واجهة ═══
+-- ═══ الواجهة ═══
 local SG = Instance.new("ScreenGui")
 SG.Name = "KWAuto"
 SG.ResetOnSpawn = false
@@ -214,7 +207,7 @@ local HSub = Instance.new("TextLabel")
 HSub.Size = UDim2.new(1, -130, 0, 16)
 HSub.Position = UDim2.new(0, 72, 0, 38)
 HSub.BackgroundTransparency = 1
-HSub.Text = "Auto • Freeze • Delay 5s"
+HSub.Text = "Auto • Freeze • Delay 23s"
 HSub.TextColor3 = Color3.fromRGB(150, 150, 220)
 HSub.Font = Enum.Font.Gotham
 HSub.TextSize = 10
@@ -447,7 +440,6 @@ local function log(m)
     pcall(function() LogScroll.CanvasPosition = Vector2.new(0, 99999) end)
     print("[KW] " .. m)
 end
-local function clearLog() logs = {}; Log.Text = "" end
 
 local function setStatus(txt, col)
     StatusText.Text = txt
@@ -509,9 +501,7 @@ game:GetService("UserInputService").InputChanged:Connect(function(i)
     end
 end)
 
--- ═══════════════════════════════════════
--- 🛠️ Helpers
--- ═══════════════════════════════════════
+-- ═══ Helpers ═══
 local function getHRP()
     return LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
 end
@@ -718,7 +708,6 @@ local function rob()
     
     freezeCharacter()
     updateFreezeBadge()
-    log("🧊 الجسم مجمد")
     
     pcall(function()
         local cam = workspace.CurrentCamera
@@ -817,9 +806,7 @@ local function rob()
     return true
 end
 
--- ═══════════════════════════════════════
--- 🎯 SERVER HOP
--- ═══════════════════════════════════════
+-- ═══ Server Hop ═══
 local function hopServer(preferEmpty)
     log("🌐 نبحث عن سيرفر فاضي...")
     setStatus("🌐 Server Hop...", Color3.fromRGB(150, 200, 255))
@@ -904,9 +891,7 @@ local function hopServer(preferEmpty)
     end
 end
 
--- ═══════════════════════════════════════
--- ⏱️ عداد تنازلي
--- ═══════════════════════════════════════
+-- ═══ عداد تنازلي ═══
 local function countdown(seconds, message)
     message = message or "بدء بعد"
     for i = seconds, 1, -1 do
@@ -918,16 +903,13 @@ local function countdown(seconds, message)
     return true
 end
 
--- ═══════════════════════════════════════
--- ♻️ AUTO LOOP
--- ═══════════════════════════════════════
+-- ═══ AUTO LOOP ═══
 local function autoLoop()
     if isRunning then return end
     isRunning = true
     stopRequested = false
     
     log("♻️ بدء الدورة")
-    setStatus("⏱️ انتظار...", Color3.fromRGB(255, 180, 60))
     
     task.spawn(function()
         while not stopRequested do
@@ -937,6 +919,7 @@ local function autoLoop()
             log("")
             log("━━━ الدورة #" .. currentLoop .. " ━━━")
             
+            -- انتظار تحميل اللعبة
             log("⏳ انتظار التحميل...")
             local waited = 0
             while (not LP.Character or not LP.Character:FindFirstChild("HumanoidRootPart")) and not stopRequested do
@@ -945,17 +928,20 @@ local function autoLoop()
                 if waited > 30 then break end
             end
             
+            -- 🧊 تجميد
             freezeCharacter()
             updateFreezeBadge()
             
-            log("⏱️ انتظار " .. CONFIG.StartDelay .. " ثواني...")
+            -- ⏱️ انتظار 23 ثانية
+            log("⏱️ انتظار " .. CONFIG.StartDelay .. " ثانية...")
             setStatus("⏱️ " .. CONFIG.StartDelay .. "s...", Color3.fromRGB(255, 180, 60))
             
             if not countdown(CONFIG.StartDelay, "بدء بعد") then break end
             
-            log("✅ جاهز!")
+            log("✅ جاهز - بدء التنفيذ!")
             setStatus("▶️ بدء...", Color3.fromRGB(80, 220, 120))
             
+            -- شراء
             if not hasTool() then
                 unfreezeCharacter()
                 updateFreezeBadge()
@@ -967,6 +953,7 @@ local function autoLoop()
                 log("✅ عندك الأداة")
             end
             
+            -- سرقة
             if hasTool() then
                 unfreezeCharacter()
                 updateFreezeBadge()
@@ -976,9 +963,2069 @@ local function autoLoop()
                 log("⚠️ ما عندك الأداة")
             end
             
+            -- انتظار قبل الهوب
             log("⏱️ انتظار قبل الهوب...")
             if not countdown(CONFIG.WaitBetweenServers, "هوب بعد") then break end
             
+            -- هوب
+            if not stopRequested then
+                hopServer(CONFIG.PreferEmpty)
+                task.wait(15)
+            end
+        end
+        
+        isRunning = false
+        setStatus("⏹️ متوقف", Color3.fromRGB(200, 80, 80))
+    end)
+end
+
+-- ═══ ربط ═══
+StartBtn.MouseButton1Click:Connect(function()
+    if isRunning then return end
+    autoLoop()
+end)
+
+FreezeBtn.MouseButton1Click:Connect(function()
+    if isFrozen then
+        unfreezeCharacter()
+        log("🔓 فك التجميد")
+    else
+        freezeCharacter()
+        log("🧊 تم التجميد")
+    end
+    updateFreezeBadge()
+end)
+
+AutoFreezeBtn.MouseButton1Click:Connect(function()
+    CONFIG.FreezeCharacter = not CONFIG.FreezeCharacter
+    if CONFIG.FreezeCharacter then
+        AutoFreezeBtn.Text = "🧊 تلقائي: تشغيل"
+        AutoFreezeBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 160)
+        log("✅ التجميد التلقائي: مفعل")
+    else
+        AutoFreezeBtn.Text = "🧊 تلقائي: إيقاف"
+        AutoFreezeBtn.BackgroundColor3 = Color3.fromRGB(120, 60, 60)
+        unfreezeCharacter()
+        updateFreezeBadge()
+        log("❌ التجميد التلقائي: معطل")
+    end
+end)
+
+StopBtn.MouseButton1Click:Connect(function()
+    stopRequested = true
+    isRunning = false
+    unfreezeCharacter()
+    updateFreezeBadge()
+    CountText.Text = "بدء بعد: --"
+    setStatus("⏹️ متوقف", Color3.fromRGB(200, 80, 80))
+    log("⏹️ إيقاف")
+end)
+
+if CONFIG.AutoStart then
+    task.wait(3)
+    log("♻️ Auto-Start!")
+    autoLoop()
+end
+
+print("[KWAuto] ✅ Loaded")-- ==========================================
+-- ✨ KW Auto Loop - انتظار 23 ثانية
+-- ==========================================
+
+local SCRIPT_URL = "https://raw.githubusercontent.com/G7R-wq/weqe3/refs/heads/main/seer2"
+
+local CONFIG = {
+    AutoStart = true,
+    StartDelay = 23,          -- ⏱️ 23 ثانية (جديد)
+    WaitBetweenServers = 5,
+    MaxPlayersInServer = 3,
+    PreferEmpty = true,
+    FreezeCharacter = true,
+    FreezeMode = "Anchor",
+}
+
+local LP = game:GetService("Players").LocalPlayer
+local PG = LP:WaitForChild("PlayerGui")
+local VIM = game:GetService("VirtualInputManager")
+local TS = game:GetService("TeleportService")
+local TweenService = game:GetService("TweenService")
+
+local CASHIER_POS = Vector3.new(-949.93, 3.74, -285.25)
+local isRunning = false
+local currentLoop = 0
+local stopRequested = false
+local isFrozen = false
+
+-- ═══ Instant Prompt Engine ═══
+local function makeInstant(p)
+    if p and p:IsA("ProximityPrompt") then
+        pcall(function()
+            p.HoldDuration = 0
+            p.RequiresLineOfSight = false
+            p.MaxActivationDistance = 99999
+        end)
+    end
+end
+for _, p in ipairs(workspace:GetDescendants()) do makeInstant(p) end
+workspace.DescendantAdded:Connect(function(c)
+    if c:IsA("ProximityPrompt") then task.wait(0.05) makeInstant(c) end
+end)
+
+-- ═══ التجميد ═══
+local function freezeCharacter()
+    if not CONFIG.FreezeCharacter then return end
+    local char = LP.Character
+    if not char then return end
+    
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    
+    if CONFIG.FreezeMode == "Anchor" and hrp then
+        hrp.Anchored = true
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+        isFrozen = true
+    elseif CONFIG.FreezeMode == "WalkSpeed" and hum then
+        hum.WalkSpeed = 0
+        hum.JumpPower = 0
+        isFrozen = true
+    end
+end
+
+local function unfreezeCharacter()
+    if not isFrozen then return end
+    local char = LP.Character
+    if not char then return end
+    
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    
+    if hrp then pcall(function() hrp.Anchored = false end) end
+    if hum then 
+        pcall(function()
+            hum.WalkSpeed = 16
+            hum.JumpPower = 50
+        end)
+    end
+    isFrozen = false
+end
+
+-- ═══ الواجهة ═══
+local SG = Instance.new("ScreenGui")
+SG.Name = "KWAuto"
+SG.ResetOnSpawn = false
+SG.DisplayOrder = 999999
+SG.IgnoreGuiInset = true
+SG.Parent = PG
+
+local Btn = Instance.new("TextButton")
+Btn.Size = UDim2.new(0, 70, 0, 70)
+Btn.Position = UDim2.new(0, 20, 0.4, 0)
+Btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Btn.Text = ""
+Btn.AutoButtonColor = false
+Btn.Parent = SG
+
+local BtnGrad = Instance.new("UIGradient")
+BtnGrad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 100, 150)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(160, 80, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 150, 255))
+}
+BtnGrad.Rotation = 45
+BtnGrad.Parent = Btn
+
+Instance.new("UICorner", Btn).CornerRadius = UDim.new(1, 0)
+
+local BtnStroke = Instance.new("UIStroke")
+BtnStroke.Color = Color3.fromRGB(255, 255, 255)
+BtnStroke.Thickness = 2.5
+BtnStroke.Transparency = 0.3
+BtnStroke.Parent = Btn
+
+local BtnIcon = Instance.new("TextLabel")
+BtnIcon.Size = UDim2.new(1, 0, 1, 0)
+BtnIcon.BackgroundTransparency = 1
+BtnIcon.Text = "♻️"
+BtnIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
+BtnIcon.Font = Enum.Font.GothamBlack
+BtnIcon.TextSize = 34
+BtnIcon.Parent = Btn
+
+task.spawn(function()
+    while SG.Parent do
+        task.wait(1)
+        pcall(function()
+            TweenService:Create(Btn, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                Size = UDim2.new(0, 75, 0, 75)
+            }):Play()
+            task.wait(0.5)
+            TweenService:Create(Btn, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                Size = UDim2.new(0, 70, 0, 70)
+            }):Play()
+        end)
+    end
+end)
+
+-- ═══ اللوحة ═══
+local F = Instance.new("Frame")
+F.Size = UDim2.new(0, 320, 0, 520)
+F.Position = UDim2.new(0.5, -160, 0.5, -260)
+F.BackgroundColor3 = Color3.fromRGB(15, 17, 24)
+F.BorderSizePixel = 0
+F.Visible = false
+F.Active = true
+F.Parent = SG
+Instance.new("UICorner", F).CornerRadius = UDim.new(0, 22)
+
+local FGrad = Instance.new("UIGradient")
+FGrad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 28, 42)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(12, 14, 20))
+}
+FGrad.Rotation = 90
+FGrad.Parent = F
+
+local FStroke = Instance.new("UIStroke")
+FStroke.Color = Color3.fromRGB(120, 100, 255)
+FStroke.Thickness = 1.5
+FStroke.Transparency = 0.4
+FStroke.Parent = F
+
+-- ═══ الهيدر ═══
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, 0, 0, 70)
+Header.BackgroundTransparency = 1
+Header.Parent = F
+
+local HIcon = Instance.new("Frame")
+HIcon.Size = UDim2.new(0, 46, 0, 46)
+HIcon.Position = UDim2.new(0, 15, 0, 12)
+HIcon.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+HIcon.Parent = Header
+Instance.new("UICorner", HIcon).CornerRadius = UDim.new(0, 14)
+
+local HIconGrad = Instance.new("UIGradient")
+HIconGrad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 100, 150)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 150, 255))
+}
+HIconGrad.Rotation = 45
+HIconGrad.Parent = HIcon
+
+local HIconTxt = Instance.new("TextLabel")
+HIconTxt.Size = UDim2.new(1, 0, 1, 0)
+HIconTxt.BackgroundTransparency = 1
+HIconTxt.Text = "♻️"
+HIconTxt.TextColor3 = Color3.new(1,1,1)
+HIconTxt.Font = Enum.Font.GothamBlack
+HIconTxt.TextSize = 26
+HIconTxt.Parent = HIcon
+
+local HTitle = Instance.new("TextLabel")
+HTitle.Size = UDim2.new(1, -130, 0, 22)
+HTitle.Position = UDim2.new(0, 72, 0, 14)
+HTitle.BackgroundTransparency = 1
+HTitle.Text = "KW Auto Loop"
+HTitle.TextColor3 = Color3.new(1,1,1)
+HTitle.Font = Enum.Font.GothamBold
+HTitle.TextSize = 16
+HTitle.TextXAlignment = Enum.TextXAlignment.Left
+HTitle.Parent = Header
+
+local HSub = Instance.new("TextLabel")
+HSub.Size = UDim2.new(1, -130, 0, 16)
+HSub.Position = UDim2.new(0, 72, 0, 38)
+HSub.BackgroundTransparency = 1
+HSub.Text = "Auto • Freeze • Delay 23s"
+HSub.TextColor3 = Color3.fromRGB(150, 150, 220)
+HSub.Font = Enum.Font.Gotham
+HSub.TextSize = 10
+HSub.TextXAlignment = Enum.TextXAlignment.Left
+HSub.Parent = Header
+
+local XBtn = Instance.new("TextButton")
+XBtn.Size = UDim2.new(0, 34, 0, 34)
+XBtn.Position = UDim2.new(1, -44, 0, 18)
+XBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+XBtn.Text = "✕"
+XBtn.TextColor3 = Color3.new(1,1,1)
+XBtn.Font = Enum.Font.GothamBold
+XBtn.TextSize = 15
+XBtn.AutoButtonColor = false
+XBtn.Parent = Header
+Instance.new("UICorner", XBtn).CornerRadius = UDim.new(0, 10)
+
+-- ═══ شريط الحالة ═══
+local StatusFrame = Instance.new("Frame")
+StatusFrame.Size = UDim2.new(1, -30, 0, 40)
+StatusFrame.Position = UDim2.new(0, 15, 0, 82)
+StatusFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 32)
+StatusFrame.BorderSizePixel = 0
+StatusFrame.Parent = F
+Instance.new("UICorner", StatusFrame).CornerRadius = UDim.new(0, 12)
+
+local StatusDot = Instance.new("Frame")
+StatusDot.Size = UDim2.new(0, 12, 0, 12)
+StatusDot.Position = UDim2.new(0, 15, 0.5, -6)
+StatusDot.BackgroundColor3 = Color3.fromRGB(120, 120, 140)
+StatusDot.Parent = StatusFrame
+Instance.new("UICorner", StatusDot).CornerRadius = UDim.new(1, 0)
+
+local StatusText = Instance.new("TextLabel")
+StatusText.Size = UDim2.new(1, -55, 1, 0)
+StatusText.Position = UDim2.new(0, 38, 0, 0)
+StatusText.BackgroundTransparency = 1
+StatusText.Text = "جاهز"
+StatusText.TextColor3 = Color3.fromRGB(220, 220, 240)
+StatusText.Font = Enum.Font.GothamBold
+StatusText.TextSize = 13
+StatusText.TextXAlignment = Enum.TextXAlignment.Left
+StatusText.Parent = StatusFrame
+
+local FreezeBadge = Instance.new("TextLabel")
+FreezeBadge.Size = UDim2.new(0, 100, 0, 24)
+FreezeBadge.Position = UDim2.new(1, -112, 0.5, -12)
+FreezeBadge.BackgroundColor3 = Color3.fromRGB(40, 60, 80)
+FreezeBadge.Text = "🧊 غير مجمد"
+FreezeBadge.TextColor3 = Color3.fromRGB(150, 200, 220)
+FreezeBadge.Font = Enum.Font.GothamBold
+FreezeBadge.TextSize = 10
+FreezeBadge.Parent = StatusFrame
+Instance.new("UICorner", FreezeBadge).CornerRadius = UDim.new(0, 6)
+
+-- ═══ عداد الدورة ═══
+local LoopFrame = Instance.new("Frame")
+LoopFrame.Size = UDim2.new(1, -30, 0, 50)
+LoopFrame.Position = UDim2.new(0, 15, 0, 130)
+LoopFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 32)
+LoopFrame.BorderSizePixel = 0
+LoopFrame.Parent = F
+Instance.new("UICorner", LoopFrame).CornerRadius = UDim.new(0, 12)
+
+local LoopIcon = Instance.new("TextLabel")
+LoopIcon.Size = UDim2.new(0, 40, 1, 0)
+LoopIcon.Position = UDim2.new(0, 5, 0, 0)
+LoopIcon.BackgroundTransparency = 1
+LoopIcon.Text = "🔄"
+LoopIcon.Font = Enum.Font.GothamBold
+LoopIcon.TextSize = 20
+LoopIcon.Parent = LoopFrame
+
+local LoopText = Instance.new("TextLabel")
+LoopText.Size = UDim2.new(0.5, -25, 1, 0)
+LoopText.Position = UDim2.new(0, 45, 0, 0)
+LoopText.BackgroundTransparency = 1
+LoopText.Text = "الدورة"
+LoopText.TextColor3 = Color3.fromRGB(150, 150, 200)
+LoopText.Font = Enum.Font.GothamBold
+LoopText.TextSize = 12
+LoopText.TextXAlignment = Enum.TextXAlignment.Left
+LoopText.Parent = LoopFrame
+
+local LoopNum = Instance.new("TextLabel")
+LoopNum.Size = UDim2.new(0, 60, 1, 0)
+LoopNum.Position = UDim2.new(1, -20, 0, 0)
+LoopNum.AnchorPoint = Vector2.new(1, 0)
+LoopNum.BackgroundTransparency = 1
+LoopNum.Text = "0"
+LoopNum.TextColor3 = Color3.fromRGB(120, 200, 255)
+LoopNum.Font = Enum.Font.GothamBlack
+LoopNum.TextSize = 22
+LoopNum.TextXAlignment = Enum.TextXAlignment.Right
+LoopNum.Parent = LoopFrame
+
+-- ═══ عداد تنازلي ═══
+local CountFrame = Instance.new("Frame")
+CountFrame.Size = UDim2.new(1, -30, 0, 45)
+CountFrame.Position = UDim2.new(0, 15, 0, 185)
+CountFrame.BackgroundColor3 = Color3.fromRGB(30, 20, 40)
+CountFrame.BorderSizePixel = 0
+CountFrame.Parent = F
+Instance.new("UICorner", CountFrame).CornerRadius = UDim.new(0, 12)
+
+local CountIcon = Instance.new("TextLabel")
+CountIcon.Size = UDim2.new(0, 40, 1, 0)
+CountIcon.Position = UDim2.new(0, 5, 0, 0)
+CountIcon.BackgroundTransparency = 1
+CountIcon.Text = "⏱️"
+CountIcon.Font = Enum.Font.GothamBold
+CountIcon.TextSize = 18
+CountIcon.Parent = CountFrame
+
+local CountText = Instance.new("TextLabel")
+CountText.Size = UDim2.new(1, -50, 1, 0)
+CountText.Position = UDim2.new(0, 45, 0, 0)
+CountText.BackgroundTransparency = 1
+CountText.Text = "بدء بعد: --"
+CountText.TextColor3 = Color3.fromRGB(255, 180, 100)
+CountText.Font = Enum.Font.GothamBold
+CountText.TextSize = 13
+CountText.TextXAlignment = Enum.TextXAlignment.Left
+CountText.Parent = CountFrame
+
+-- ═══ السجل ═══
+local LogFrame = Instance.new("Frame")
+LogFrame.Size = UDim2.new(1, -30, 0, 130)
+LogFrame.Position = UDim2.new(0, 15, 0, 240)
+LogFrame.BackgroundColor3 = Color3.fromRGB(8, 9, 14)
+LogFrame.BorderSizePixel = 0
+LogFrame.Parent = F
+Instance.new("UICorner", LogFrame).CornerRadius = UDim.new(0, 12)
+
+local LogStroke = Instance.new("UIStroke")
+LogStroke.Color = Color3.fromRGB(40, 45, 70)
+LogStroke.Thickness = 1
+LogStroke.Parent = LogFrame
+
+local LogScroll = Instance.new("ScrollingFrame")
+LogScroll.Size = UDim2.new(1, -12, 1, -12)
+LogScroll.Position = UDim2.new(0, 6, 0, 6)
+LogScroll.BackgroundTransparency = 1
+LogScroll.BorderSizePixel = 0
+LogScroll.ScrollBarThickness = 4
+LogScroll.ScrollBarImageColor3 = Color3.fromRGB(120, 100, 255)
+LogScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+LogScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+LogScroll.Parent = LogFrame
+
+local Log = Instance.new("TextLabel")
+Log.Size = UDim2.new(1, -8, 0, 0)
+Log.Position = UDim2.new(0, 4, 0, 0)
+Log.BackgroundTransparency = 1
+Log.Text = "✦ جاهز"
+Log.TextColor3 = Color3.fromRGB(180, 210, 255)
+Log.Font = Enum.Font.Code
+Log.TextSize = 10
+Log.TextWrapped = true
+Log.TextXAlignment = Enum.TextXAlignment.Left
+Log.TextYAlignment = Enum.TextYAlignment.Top
+Log.AutomaticSize = Enum.AutomaticSize.Y
+Log.Parent = LogScroll
+
+-- ═══ الأزرار ═══
+local StartBtn = Instance.new("TextButton")
+StartBtn.Size = UDim2.new(1, -30, 0, 48)
+StartBtn.Position = UDim2.new(0, 15, 1, -168)
+StartBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+StartBtn.Text = "▶️ ابدأ الآن"
+StartBtn.TextColor3 = Color3.new(1,1,1)
+StartBtn.Font = Enum.Font.GothamBold
+StartBtn.TextSize = 13
+StartBtn.AutoButtonColor = false
+StartBtn.Parent = F
+Instance.new("UICorner", StartBtn).CornerRadius = UDim.new(0, 14)
+
+local StartGrad = Instance.new("UIGradient")
+StartGrad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 210, 120)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 160, 200))
+}
+StartGrad.Rotation = 30
+StartGrad.Parent = StartBtn
+
+local FreezeBtn = Instance.new("TextButton")
+FreezeBtn.Size = UDim2.new(0.5, -20, 0, 40)
+FreezeBtn.Position = UDim2.new(0, 15, 1, -114)
+FreezeBtn.BackgroundColor3 = Color3.fromRGB(60, 120, 180)
+FreezeBtn.Text = "🧊 جمّد"
+FreezeBtn.TextColor3 = Color3.new(1,1,1)
+FreezeBtn.Font = Enum.Font.GothamBold
+FreezeBtn.TextSize = 11
+FreezeBtn.AutoButtonColor = false
+FreezeBtn.Parent = F
+Instance.new("UICorner", FreezeBtn).CornerRadius = UDim.new(0, 12)
+
+local AutoFreezeBtn = Instance.new("TextButton")
+AutoFreezeBtn.Size = UDim2.new(0.5, -20, 0, 40)
+AutoFreezeBtn.Position = UDim2.new(0.5, 5, 1, -114)
+AutoFreezeBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 160)
+AutoFreezeBtn.Text = "🧊 تلقائي: تشغيل"
+AutoFreezeBtn.TextColor3 = Color3.new(1,1,1)
+AutoFreezeBtn.Font = Enum.Font.GothamBold
+AutoFreezeBtn.TextSize = 10
+AutoFreezeBtn.AutoButtonColor = false
+AutoFreezeBtn.Parent = F
+Instance.new("UICorner", AutoFreezeBtn).CornerRadius = UDim.new(0, 12)
+
+local StopBtn = Instance.new("TextButton")
+StopBtn.Size = UDim2.new(1, -30, 0, 40)
+StopBtn.Position = UDim2.new(0, 15, 1, -66)
+StopBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 60)
+StopBtn.Text = "⏹️ إيقاف"
+StopBtn.TextColor3 = Color3.new(1,1,1)
+StopBtn.Font = Enum.Font.GothamBold
+StopBtn.TextSize = 12
+StopBtn.AutoButtonColor = false
+StopBtn.Parent = F
+Instance.new("UICorner", StopBtn).CornerRadius = UDim.new(0, 12)
+
+-- ═══ Logging ═══
+local logs = {}
+local function log(m)
+    table.insert(logs, m)
+    if #logs > 15 then table.remove(logs, 1) end
+    Log.Text = table.concat(logs, "\n")
+    task.wait()
+    pcall(function() LogScroll.CanvasPosition = Vector2.new(0, 99999) end)
+    print("[KW] " .. m)
+end
+
+local function setStatus(txt, col)
+    StatusText.Text = txt
+    StatusDot.BackgroundColor3 = col or Color3.fromRGB(120, 120, 140)
+end
+
+local function updateFreezeBadge()
+    if isFrozen then
+        FreezeBadge.Text = "🧊 مجمد"
+        FreezeBadge.BackgroundColor3 = Color3.fromRGB(50, 100, 150)
+        FreezeBadge.TextColor3 = Color3.fromRGB(150, 220, 255)
+    else
+        FreezeBadge.Text = "🧊 غير مجمد"
+        FreezeBadge.BackgroundColor3 = Color3.fromRGB(40, 60, 80)
+        FreezeBadge.TextColor3 = Color3.fromRGB(150, 200, 220)
+    end
+end
+
+-- فتح/إغلاق
+local function openPanel()
+    F.Visible = true
+    F.Size = UDim2.new(0, 240, 0, 380)
+    F.Position = UDim2.new(0.5, -120, 0.5, -190)
+    TweenService:Create(F, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 320, 0, 520),
+        Position = UDim2.new(0.5, -160, 0.5, -260)
+    }):Play()
+end
+
+local function closePanel()
+    TweenService:Create(F, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        Size = UDim2.new(0, 240, 0, 380),
+        Position = UDim2.new(0.5, -120, 0.5, -190)
+    }):Play()
+    task.wait(0.2)
+    F.Visible = false
+end
+
+Btn.MouseButton1Click:Connect(function()
+    if F.Visible then closePanel() else openPanel() end
+end)
+XBtn.MouseButton1Click:Connect(closePanel)
+
+-- سحب
+local drag, dIn, sPos, fPos
+Header.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then
+        drag = true; sPos = i.Position; fPos = F.Position
+        i.Changed:Connect(function() if i.UserInputState == Enum.UserInputState.End then drag = false end end)
+    end
+end)
+Header.InputChanged:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseMovement then dIn = i end
+end)
+game:GetService("UserInputService").InputChanged:Connect(function(i)
+    if i == dIn and drag then
+        local d = i.Position - sPos
+        F.Position = UDim2.new(fPos.X.Scale, fPos.X.Offset + d.X, fPos.Y.Scale, fPos.Y.Offset + d.Y)
+    end
+end)
+
+-- ═══ Helpers ═══
+local function getHRP()
+    return LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+end
+
+local function hasTool()
+    local keys = {"فاتح", "متقدم", "advanced", "lockpick"}
+    local function chk(n)
+        local x = n:lower()
+        for _, k in ipairs(keys) do 
+            if x:find(k:lower()) then return true end 
+        end
+        return false
+    end
+    if LP.Character then
+        for _, t in ipairs(LP.Character:GetChildren()) do
+            if t:IsA("Tool") and chk(t.Name) then return t end
+        end
+    end
+    local bp = LP:FindFirstChild("Backpack")
+    if bp then
+        for _, t in ipairs(bp:GetChildren()) do
+            if t:IsA("Tool") and chk(t.Name) then return t end
+        end
+    end
+    return nil
+end
+
+local function clickGui(g)
+    if not g then return false end
+    local clicked = false
+    pcall(function()
+        if getconnections then
+            for _, c in pairs(getconnections(g.MouseButton1Click)) do
+                if c.Function then task.spawn(c.Function); clicked = true end
+            end
+            for _, c in pairs(getconnections(g.MouseButton1Down)) do
+                if c.Function then task.spawn(c.Function); clicked = true end
+            end
+            for _, c in pairs(getconnections(g.InputBegan)) do
+                if c.Function then 
+                    task.spawn(c.Function, {UserInputType = Enum.UserInputType.Touch})
+                    clicked = true 
+                end
+            end
+            for _, c in pairs(getconnections(g.Activated)) do
+                if c.Function then task.spawn(c.Function); clicked = true end
+            end
+        end
+    end)
+    pcall(function() g:Activate() end)
+    pcall(function()
+        local ap = g.AbsolutePosition
+        local as = g.AbsoluteSize
+        if as.X > 5 and ap.X > 0 then
+            local cx = ap.X + as.X/2
+            local cy = ap.Y + as.Y/2
+            VIM:SendMouseButtonEvent(cx, cy, 0, true, game, 1)
+            task.wait(0.03)
+            VIM:SendMouseButtonEvent(cx, cy, 0, false, game, 1)
+            clicked = true
+        end
+    end)
+    return clicked
+end
+
+local function findBtn(root, names)
+    if not root then return nil end
+    for _, obj in ipairs(root:GetDescendants()) do
+        if obj:IsA("TextButton") or obj:IsA("ImageButton") then
+            for _, n in ipairs(names) do
+                if obj.Name:lower() == n:lower() then return obj end
+            end
+        end
+    end
+    return nil
+end
+
+-- ═══ شراء ═══
+local function buy()
+    log("💰 شراء...")
+    setStatus("💰 شراء...", Color3.fromRGB(255, 180, 60))
+    
+    if hasTool() then log("✅ عندك الأداة"); return true end
+    
+    local seller = workspace:FindFirstChild("SellerNPC", true)
+    if not seller then log("❌ ما فيه بائع"); return false end
+    
+    local part = seller:IsA("BasePart") and seller or seller:FindFirstChildWhichIsA("BasePart", true)
+    if part then
+        local hrp = getHRP()
+        if hrp then
+            hrp.CFrame = CFrame.new(part.Position + Vector3.new(0, 3, 3))
+        end
+        task.wait(0.5)
+        freezeCharacter()
+        updateFreezeBadge()
+    end
+    
+    local p = seller:FindFirstChildWhichIsA("ProximityPrompt", true)
+    if p then
+        pcall(function()
+            p.HoldDuration = 0
+            p.RequiresLineOfSight = false
+            p.MaxActivationDistance = 99999
+            p.Enabled = true
+            fireproximityprompt(p)
+        end)
+    end
+    
+    local market, opened = nil, false
+    for i = 1, 20 do
+        if stopRequested then return false end
+        market = PG:FindFirstChild("Market")
+        if market then
+            local mf = market:FindFirstChild("MainFrame")
+            if mf and mf.Visible then opened = true; break end
+        end
+        task.wait(0.1)
+    end
+    if not opened then log("❌ Market ما فتح"); return false end
+    log("✅ Market فتح")
+    task.wait(0.6)
+    
+    local mf = market:FindFirstChild("MainFrame")
+    local list = mf:FindFirstChild("ItemsList")
+    if not list then return false end
+    
+    local target = nil
+    for _, item in ipairs(list:GetChildren()) do
+        if item:IsA("GuiObject") then
+            local txt = ""
+            for _, d in ipairs(item:GetDescendants()) do
+                if d:IsA("TextLabel") then
+                    local t = ""
+                    pcall(function() t = d.Text end)
+                    if t ~= "" then txt = txt .. " " .. t end
+                end
+            end
+            local low = txt:lower()
+            if low:find("lockpick") or low:find("advanced") or low:find("متقدم") or
+               (low:find("فاتح") and (low:find("قفل") or low:find("اقفال"))) then
+                target = item
+                break
+            end
+        end
+    end
+    if not target then return false end
+    
+    local addBtn = nil
+    for _, d in ipairs(target:GetDescendants()) do
+        if (d:IsA("TextButton") or d:IsA("ImageButton")) and 
+           (d.Name == "Click" or d.Name == "AddToCart" or d.Name == "Add") then
+            addBtn = d; break
+        end
+    end
+    if addBtn then clickGui(addBtn); task.wait(0.7) end
+    
+    local cart = mf:FindFirstChild("Cart")
+    if cart then
+        local buyFrame = cart:FindFirstChild("Buy")
+        local buyBtn = buyFrame and (findBtn(buyFrame, {"Click","Buy"}) or buyFrame) or findBtn(cart, {"Buy","Click"})
+        if buyBtn then clickGui(buyBtn); task.wait(0.7) end
+    end
+    
+    task.wait(0.6)
+    if hasTool() then log("🎉 وصلت!"); return true end
+    return false
+end
+
+-- ═══ سرقة ═══
+local function rob()
+    log("🏧 سرقة...")
+    setStatus("🏧 سرقة...", Color3.fromRGB(255, 80, 120))
+    
+    local tool = hasTool()
+    if tool and LP.Character then
+        local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum:EquipTool(tool) end
+    end
+    task.wait(0.2)
+    
+    local prompt, robPos = nil, CASHIER_POS
+    for _, p in ipairs(workspace:GetDescendants()) do
+        if p:IsA("ProximityPrompt") and p.Name == "StartProximity" then
+            prompt = p
+            local parent = p.Parent
+            local main = parent:FindFirstChild("MainCashier")
+            if main and main:IsA("BasePart") then
+                robPos = main.Position
+            elseif parent:IsA("BasePart") then
+                robPos = parent.Position
+            end
+            break
+        end
+    end
+    if not prompt then log("❌ ما فيه Prompt"); return false end
+    
+    local hrp = getHRP()
+    if hrp then
+        hrp.CFrame = CFrame.new(robPos + Vector3.new(0, 2.5, 2))
+        hrp.AssemblyLinearVelocity = Vector3.zero
+    end
+    task.wait(0.3)
+    
+    freezeCharacter()
+    updateFreezeBadge()
+    
+    pcall(function()
+        local cam = workspace.CurrentCamera
+        if cam then
+            cam.CameraType = Enum.CameraType.Custom
+            cam.CFrame = CFrame.lookAt(
+                robPos + Vector3.new(0, 3.5, 5),
+                robPos + Vector3.new(0, 1.2, 0)
+            )
+            cam.Focus = CFrame.new(robPos + Vector3.new(0, 1.2, 0))
+        end
+    end)
+    task.wait(0.3)
+    
+    pcall(function()
+        prompt.HoldDuration = 0
+        prompt.RequiresLineOfSight = false
+        prompt.MaxActivationDistance = 99999
+        prompt.Enabled = true
+    end)
+    
+    if not prompt.Enabled then log("⚠️ مقفل"); return false end
+    
+    local uiBtn = nil
+    for i = 1, 20 do
+        if stopRequested then return false end
+        pcall(function()
+            local cam = workspace.CurrentCamera
+            if cam then
+                cam.CFrame = CFrame.lookAt(
+                    robPos + Vector3.new(0, 3.5, 5),
+                    robPos + Vector3.new(0, 1.2, 0)
+                )
+            end
+        end)
+        
+        local pgui = PG:FindFirstChild("ProximityPrompts")
+        if pgui then
+            for _, obj in ipairs(pgui:GetDescendants()) do
+                if (obj:IsA("TextButton") or obj:IsA("ImageButton")) and obj.AbsoluteSize.X > 30 then
+                    uiBtn = obj; break
+                end
+            end
+        end
+        if uiBtn then break end
+        task.wait(0.1)
+    end
+    
+    pcall(function() fireproximityprompt(prompt) end)
+    pcall(function()
+        VIM:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+        task.wait(0.05)
+        VIM:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+    end)
+    
+    if uiBtn then
+        local ap = uiBtn.AbsolutePosition
+        local as = uiBtn.AbsoluteSize
+        local cx = ap.X + as.X/2
+        local cy = ap.Y + as.Y/2
+        pcall(function()
+            VIM:SendMouseButtonEvent(cx, cy, 0, true, game, 1)
+            task.wait(0.2)
+            VIM:SendMouseButtonEvent(cx, cy, 0, false, game, 1)
+        end)
+        pcall(function()
+            for _, c in pairs(getconnections(uiBtn.InputBegan)) do
+                if c.Function then
+                    task.spawn(c.Function, {
+                        UserInputType = Enum.UserInputType.Touch,
+                        UserInputState = Enum.UserInputState.Begin,
+                        Position = Vector3.new(cx, cy, 0),
+                    })
+                end
+            end
+        end)
+        pcall(function() uiBtn:Activate() end)
+    end
+    
+    local startT = tick()
+    while tick() - startT < 5 do
+        if stopRequested then break end
+        pcall(function()
+            local cam = workspace.CurrentCamera
+            if cam then
+                cam.CFrame = CFrame.lookAt(
+                    robPos + Vector3.new(0, 3.5, 5),
+                    robPos + Vector3.new(0, 1.2, 0)
+                )
+            end
+        end)
+        task.wait(0.15)
+    end
+    
+    log("🎉 خلصت السرقة")
+    return true
+end
+
+-- ═══ Server Hop ═══
+local function hopServer(preferEmpty)
+    log("🌐 نبحث عن سيرفر فاضي...")
+    setStatus("🌐 Server Hop...", Color3.fromRGB(150, 200, 255))
+    
+    unfreezeCharacter()
+    updateFreezeBadge()
+    
+    local queueCode = string.format([[
+        wait(5)
+        local url = "%s"
+        local ok, s = pcall(function()
+            return game:HttpGet(url)
+        end)
+        if ok and s then
+            loadstring(s)()
+        end
+    ]], SCRIPT_URL)
+    
+    local saved = false
+    pcall(function()
+        if queue_on_teleport then queue_on_teleport(queueCode); saved = true end
+    end)
+    if not saved then
+        pcall(function()
+            if syn and syn.queue_on_teleport then syn.queue_on_teleport(queueCode); saved = true end
+        end)
+    end
+    if not saved then
+        pcall(function()
+            if fluxus and fluxus.queue_on_teleport then fluxus.queue_on_teleport(queueCode); saved = true end
+        end)
+    end
+    
+    task.wait(1)
+    
+    local servers = {}
+    pcall(function()
+        servers = TS:GetPublicServersAsync(game.PlaceId)
+    end)
+    
+    if #servers == 0 then
+        log("⚠️ Teleport عادي")
+        pcall(function() TS:Teleport(game.PlaceId) end)
+        return
+    end
+    
+    local currentJob = game.JobId
+    local emptyServers, lowServers, anyServers = {}, {}, {}
+    
+    for _, s in ipairs(servers) do
+        if s.id ~= currentJob and s.playing < s.maxPlayers then
+            table.insert(anyServers, s)
+            if s.playing == 0 then
+                table.insert(emptyServers, s)
+            elseif s.playing <= CONFIG.MaxPlayersInServer then
+                table.insert(lowServers, s)
+            end
+        end
+    end
+    
+    log("🟢 فاضية: " .. #emptyServers .. " | 🟡 قليل: " .. #lowServers)
+    
+    local pick = nil
+    if preferEmpty and #emptyServers > 0 then
+        pick = emptyServers[math.random(1, #emptyServers)]
+        log("✅ اخترنا سيرفر فاضي!")
+    elseif #lowServers > 0 then
+        pick = lowServers[math.random(1, #lowServers)]
+        log("✅ سيرفر بشوية لاعبين")
+    elseif #anyServers > 0 then
+        table.sort(anyServers, function(a, b) return a.playing < b.playing end)
+        pick = anyServers[1]
+    end
+    
+    if pick then
+        log("🎯 " .. pick.id:sub(1, 8) .. " (" .. pick.playing .. "/" .. pick.maxPlayers .. ")")
+        pcall(function()
+            TS:TeleportToPlaceInstance(game.PlaceId, pick.id)
+        end)
+    else
+        pcall(function() TS:Teleport(game.PlaceId) end)
+    end
+end
+
+-- ═══ عداد تنازلي ═══
+local function countdown(seconds, message)
+    message = message or "بدء بعد"
+    for i = seconds, 1, -1 do
+        if stopRequested then return false end
+        CountText.Text = message .. ": " .. i .. "s"
+        task.wait(1)
+    end
+    CountText.Text = message .. ": --"
+    return true
+end
+
+-- ═══ AUTO LOOP ═══
+local function autoLoop()
+    if isRunning then return end
+    isRunning = true
+    stopRequested = false
+    
+    log("♻️ بدء الدورة")
+    
+    task.spawn(function()
+        while not stopRequested do
+            currentLoop = currentLoop + 1
+            LoopNum.Text = tostring(currentLoop)
+            
+            log("")
+            log("━━━ الدورة #" .. currentLoop .. " ━━━")
+            
+            -- انتظار تحميل اللعبة
+            log("⏳ انتظار التحميل...")
+            local waited = 0
+            while (not LP.Character or not LP.Character:FindFirstChild("HumanoidRootPart")) and not stopRequested do
+                task.wait(0.5)
+                waited = waited + 0.5
+                if waited > 30 then break end
+            end
+            
+            -- 🧊 تجميد
+            freezeCharacter()
+            updateFreezeBadge()
+            
+            -- ⏱️ انتظار 23 ثانية
+            log("⏱️ انتظار " .. CONFIG.StartDelay .. " ثانية...")
+            setStatus("⏱️ " .. CONFIG.StartDelay .. "s...", Color3.fromRGB(255, 180, 60))
+            
+            if not countdown(CONFIG.StartDelay, "بدء بعد") then break end
+            
+            log("✅ جاهز - بدء التنفيذ!")
+            setStatus("▶️ بدء...", Color3.fromRGB(80, 220, 120))
+            
+            -- شراء
+            if not hasTool() then
+                unfreezeCharacter()
+                updateFreezeBadge()
+                buy()
+                task.wait(1)
+                freezeCharacter()
+                updateFreezeBadge()
+            else
+                log("✅ عندك الأداة")
+            end
+            
+            -- سرقة
+            if hasTool() then
+                unfreezeCharacter()
+                updateFreezeBadge()
+                task.wait(0.2)
+                rob()
+            else
+                log("⚠️ ما عندك الأداة")
+            end
+            
+            -- انتظار قبل الهوب
+            log("⏱️ انتظار قبل الهوب...")
+            if not countdown(CONFIG.WaitBetweenServers, "هوب بعد") then break end
+            
+            -- هوب
+            if not stopRequested then
+                hopServer(CONFIG.PreferEmpty)
+                task.wait(15)
+            end
+        end
+        
+        isRunning = false
+        setStatus("⏹️ متوقف", Color3.fromRGB(200, 80, 80))
+    end)
+end
+
+-- ═══ ربط ═══
+StartBtn.MouseButton1Click:Connect(function()
+    if isRunning then return end
+    autoLoop()
+end)
+
+FreezeBtn.MouseButton1Click:Connect(function()
+    if isFrozen then
+        unfreezeCharacter()
+        log("🔓 فك التجميد")
+    else
+        freezeCharacter()
+        log("🧊 تم التجميد")
+    end
+    updateFreezeBadge()
+end)
+
+AutoFreezeBtn.MouseButton1Click:Connect(function()
+    CONFIG.FreezeCharacter = not CONFIG.FreezeCharacter
+    if CONFIG.FreezeCharacter then
+        AutoFreezeBtn.Text = "🧊 تلقائي: تشغيل"
+        AutoFreezeBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 160)
+        log("✅ التجميد التلقائي: مفعل")
+    else
+        AutoFreezeBtn.Text = "🧊 تلقائي: إيقاف"
+        AutoFreezeBtn.BackgroundColor3 = Color3.fromRGB(120, 60, 60)
+        unfreezeCharacter()
+        updateFreezeBadge()
+        log("❌ التجميد التلقائي: معطل")
+    end
+end)
+
+StopBtn.MouseButton1Click:Connect(function()
+    stopRequested = true
+    isRunning = false
+    unfreezeCharacter()
+    updateFreezeBadge()
+    CountText.Text = "بدء بعد: --"
+    setStatus("⏹️ متوقف", Color3.fromRGB(200, 80, 80))
+    log("⏹️ إيقاف")
+end)
+
+if CONFIG.AutoStart then
+    task.wait(3)
+    log("♻️ Auto-Start!")
+    autoLoop()
+end
+
+print("[KWAuto] ✅ Loaded")-- ==========================================
+-- ✨ KW Auto Loop - انتظار 23 ثانية
+-- ==========================================
+
+local SCRIPT_URL = "https://raw.githubusercontent.com/G7R-wq/weqe3/refs/heads/main/seer2"
+
+local CONFIG = {
+    AutoStart = true,
+    StartDelay = 23,          -- ⏱️ 23 ثانية (جديد)
+    WaitBetweenServers = 5,
+    MaxPlayersInServer = 3,
+    PreferEmpty = true,
+    FreezeCharacter = true,
+    FreezeMode = "Anchor",
+}
+
+local LP = game:GetService("Players").LocalPlayer
+local PG = LP:WaitForChild("PlayerGui")
+local VIM = game:GetService("VirtualInputManager")
+local TS = game:GetService("TeleportService")
+local TweenService = game:GetService("TweenService")
+
+local CASHIER_POS = Vector3.new(-949.93, 3.74, -285.25)
+local isRunning = false
+local currentLoop = 0
+local stopRequested = false
+local isFrozen = false
+
+-- ═══ Instant Prompt Engine ═══
+local function makeInstant(p)
+    if p and p:IsA("ProximityPrompt") then
+        pcall(function()
+            p.HoldDuration = 0
+            p.RequiresLineOfSight = false
+            p.MaxActivationDistance = 99999
+        end)
+    end
+end
+for _, p in ipairs(workspace:GetDescendants()) do makeInstant(p) end
+workspace.DescendantAdded:Connect(function(c)
+    if c:IsA("ProximityPrompt") then task.wait(0.05) makeInstant(c) end
+end)
+
+-- ═══ التجميد ═══
+local function freezeCharacter()
+    if not CONFIG.FreezeCharacter then return end
+    local char = LP.Character
+    if not char then return end
+    
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    
+    if CONFIG.FreezeMode == "Anchor" and hrp then
+        hrp.Anchored = true
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+        isFrozen = true
+    elseif CONFIG.FreezeMode == "WalkSpeed" and hum then
+        hum.WalkSpeed = 0
+        hum.JumpPower = 0
+        isFrozen = true
+    end
+end
+
+local function unfreezeCharacter()
+    if not isFrozen then return end
+    local char = LP.Character
+    if not char then return end
+    
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    
+    if hrp then pcall(function() hrp.Anchored = false end) end
+    if hum then 
+        pcall(function()
+            hum.WalkSpeed = 16
+            hum.JumpPower = 50
+        end)
+    end
+    isFrozen = false
+end
+
+-- ═══ الواجهة ═══
+local SG = Instance.new("ScreenGui")
+SG.Name = "KWAuto"
+SG.ResetOnSpawn = false
+SG.DisplayOrder = 999999
+SG.IgnoreGuiInset = true
+SG.Parent = PG
+
+local Btn = Instance.new("TextButton")
+Btn.Size = UDim2.new(0, 70, 0, 70)
+Btn.Position = UDim2.new(0, 20, 0.4, 0)
+Btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Btn.Text = ""
+Btn.AutoButtonColor = false
+Btn.Parent = SG
+
+local BtnGrad = Instance.new("UIGradient")
+BtnGrad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 100, 150)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(160, 80, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 150, 255))
+}
+BtnGrad.Rotation = 45
+BtnGrad.Parent = Btn
+
+Instance.new("UICorner", Btn).CornerRadius = UDim.new(1, 0)
+
+local BtnStroke = Instance.new("UIStroke")
+BtnStroke.Color = Color3.fromRGB(255, 255, 255)
+BtnStroke.Thickness = 2.5
+BtnStroke.Transparency = 0.3
+BtnStroke.Parent = Btn
+
+local BtnIcon = Instance.new("TextLabel")
+BtnIcon.Size = UDim2.new(1, 0, 1, 0)
+BtnIcon.BackgroundTransparency = 1
+BtnIcon.Text = "♻️"
+BtnIcon.TextColor3 = Color3.fromRGB(255, 255, 255)
+BtnIcon.Font = Enum.Font.GothamBlack
+BtnIcon.TextSize = 34
+BtnIcon.Parent = Btn
+
+task.spawn(function()
+    while SG.Parent do
+        task.wait(1)
+        pcall(function()
+            TweenService:Create(Btn, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                Size = UDim2.new(0, 75, 0, 75)
+            }):Play()
+            task.wait(0.5)
+            TweenService:Create(Btn, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                Size = UDim2.new(0, 70, 0, 70)
+            }):Play()
+        end)
+    end
+end)
+
+-- ═══ اللوحة ═══
+local F = Instance.new("Frame")
+F.Size = UDim2.new(0, 320, 0, 520)
+F.Position = UDim2.new(0.5, -160, 0.5, -260)
+F.BackgroundColor3 = Color3.fromRGB(15, 17, 24)
+F.BorderSizePixel = 0
+F.Visible = false
+F.Active = true
+F.Parent = SG
+Instance.new("UICorner", F).CornerRadius = UDim.new(0, 22)
+
+local FGrad = Instance.new("UIGradient")
+FGrad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 28, 42)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(12, 14, 20))
+}
+FGrad.Rotation = 90
+FGrad.Parent = F
+
+local FStroke = Instance.new("UIStroke")
+FStroke.Color = Color3.fromRGB(120, 100, 255)
+FStroke.Thickness = 1.5
+FStroke.Transparency = 0.4
+FStroke.Parent = F
+
+-- ═══ الهيدر ═══
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, 0, 0, 70)
+Header.BackgroundTransparency = 1
+Header.Parent = F
+
+local HIcon = Instance.new("Frame")
+HIcon.Size = UDim2.new(0, 46, 0, 46)
+HIcon.Position = UDim2.new(0, 15, 0, 12)
+HIcon.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+HIcon.Parent = Header
+Instance.new("UICorner", HIcon).CornerRadius = UDim.new(0, 14)
+
+local HIconGrad = Instance.new("UIGradient")
+HIconGrad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 100, 150)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 150, 255))
+}
+HIconGrad.Rotation = 45
+HIconGrad.Parent = HIcon
+
+local HIconTxt = Instance.new("TextLabel")
+HIconTxt.Size = UDim2.new(1, 0, 1, 0)
+HIconTxt.BackgroundTransparency = 1
+HIconTxt.Text = "♻️"
+HIconTxt.TextColor3 = Color3.new(1,1,1)
+HIconTxt.Font = Enum.Font.GothamBlack
+HIconTxt.TextSize = 26
+HIconTxt.Parent = HIcon
+
+local HTitle = Instance.new("TextLabel")
+HTitle.Size = UDim2.new(1, -130, 0, 22)
+HTitle.Position = UDim2.new(0, 72, 0, 14)
+HTitle.BackgroundTransparency = 1
+HTitle.Text = "KW Auto Loop"
+HTitle.TextColor3 = Color3.new(1,1,1)
+HTitle.Font = Enum.Font.GothamBold
+HTitle.TextSize = 16
+HTitle.TextXAlignment = Enum.TextXAlignment.Left
+HTitle.Parent = Header
+
+local HSub = Instance.new("TextLabel")
+HSub.Size = UDim2.new(1, -130, 0, 16)
+HSub.Position = UDim2.new(0, 72, 0, 38)
+HSub.BackgroundTransparency = 1
+HSub.Text = "Auto • Freeze • Delay 23s"
+HSub.TextColor3 = Color3.fromRGB(150, 150, 220)
+HSub.Font = Enum.Font.Gotham
+HSub.TextSize = 10
+HSub.TextXAlignment = Enum.TextXAlignment.Left
+HSub.Parent = Header
+
+local XBtn = Instance.new("TextButton")
+XBtn.Size = UDim2.new(0, 34, 0, 34)
+XBtn.Position = UDim2.new(1, -44, 0, 18)
+XBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+XBtn.Text = "✕"
+XBtn.TextColor3 = Color3.new(1,1,1)
+XBtn.Font = Enum.Font.GothamBold
+XBtn.TextSize = 15
+XBtn.AutoButtonColor = false
+XBtn.Parent = Header
+Instance.new("UICorner", XBtn).CornerRadius = UDim.new(0, 10)
+
+-- ═══ شريط الحالة ═══
+local StatusFrame = Instance.new("Frame")
+StatusFrame.Size = UDim2.new(1, -30, 0, 40)
+StatusFrame.Position = UDim2.new(0, 15, 0, 82)
+StatusFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 32)
+StatusFrame.BorderSizePixel = 0
+StatusFrame.Parent = F
+Instance.new("UICorner", StatusFrame).CornerRadius = UDim.new(0, 12)
+
+local StatusDot = Instance.new("Frame")
+StatusDot.Size = UDim2.new(0, 12, 0, 12)
+StatusDot.Position = UDim2.new(0, 15, 0.5, -6)
+StatusDot.BackgroundColor3 = Color3.fromRGB(120, 120, 140)
+StatusDot.Parent = StatusFrame
+Instance.new("UICorner", StatusDot).CornerRadius = UDim.new(1, 0)
+
+local StatusText = Instance.new("TextLabel")
+StatusText.Size = UDim2.new(1, -55, 1, 0)
+StatusText.Position = UDim2.new(0, 38, 0, 0)
+StatusText.BackgroundTransparency = 1
+StatusText.Text = "جاهز"
+StatusText.TextColor3 = Color3.fromRGB(220, 220, 240)
+StatusText.Font = Enum.Font.GothamBold
+StatusText.TextSize = 13
+StatusText.TextXAlignment = Enum.TextXAlignment.Left
+StatusText.Parent = StatusFrame
+
+local FreezeBadge = Instance.new("TextLabel")
+FreezeBadge.Size = UDim2.new(0, 100, 0, 24)
+FreezeBadge.Position = UDim2.new(1, -112, 0.5, -12)
+FreezeBadge.BackgroundColor3 = Color3.fromRGB(40, 60, 80)
+FreezeBadge.Text = "🧊 غير مجمد"
+FreezeBadge.TextColor3 = Color3.fromRGB(150, 200, 220)
+FreezeBadge.Font = Enum.Font.GothamBold
+FreezeBadge.TextSize = 10
+FreezeBadge.Parent = StatusFrame
+Instance.new("UICorner", FreezeBadge).CornerRadius = UDim.new(0, 6)
+
+-- ═══ عداد الدورة ═══
+local LoopFrame = Instance.new("Frame")
+LoopFrame.Size = UDim2.new(1, -30, 0, 50)
+LoopFrame.Position = UDim2.new(0, 15, 0, 130)
+LoopFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 32)
+LoopFrame.BorderSizePixel = 0
+LoopFrame.Parent = F
+Instance.new("UICorner", LoopFrame).CornerRadius = UDim.new(0, 12)
+
+local LoopIcon = Instance.new("TextLabel")
+LoopIcon.Size = UDim2.new(0, 40, 1, 0)
+LoopIcon.Position = UDim2.new(0, 5, 0, 0)
+LoopIcon.BackgroundTransparency = 1
+LoopIcon.Text = "🔄"
+LoopIcon.Font = Enum.Font.GothamBold
+LoopIcon.TextSize = 20
+LoopIcon.Parent = LoopFrame
+
+local LoopText = Instance.new("TextLabel")
+LoopText.Size = UDim2.new(0.5, -25, 1, 0)
+LoopText.Position = UDim2.new(0, 45, 0, 0)
+LoopText.BackgroundTransparency = 1
+LoopText.Text = "الدورة"
+LoopText.TextColor3 = Color3.fromRGB(150, 150, 200)
+LoopText.Font = Enum.Font.GothamBold
+LoopText.TextSize = 12
+LoopText.TextXAlignment = Enum.TextXAlignment.Left
+LoopText.Parent = LoopFrame
+
+local LoopNum = Instance.new("TextLabel")
+LoopNum.Size = UDim2.new(0, 60, 1, 0)
+LoopNum.Position = UDim2.new(1, -20, 0, 0)
+LoopNum.AnchorPoint = Vector2.new(1, 0)
+LoopNum.BackgroundTransparency = 1
+LoopNum.Text = "0"
+LoopNum.TextColor3 = Color3.fromRGB(120, 200, 255)
+LoopNum.Font = Enum.Font.GothamBlack
+LoopNum.TextSize = 22
+LoopNum.TextXAlignment = Enum.TextXAlignment.Right
+LoopNum.Parent = LoopFrame
+
+-- ═══ عداد تنازلي ═══
+local CountFrame = Instance.new("Frame")
+CountFrame.Size = UDim2.new(1, -30, 0, 45)
+CountFrame.Position = UDim2.new(0, 15, 0, 185)
+CountFrame.BackgroundColor3 = Color3.fromRGB(30, 20, 40)
+CountFrame.BorderSizePixel = 0
+CountFrame.Parent = F
+Instance.new("UICorner", CountFrame).CornerRadius = UDim.new(0, 12)
+
+local CountIcon = Instance.new("TextLabel")
+CountIcon.Size = UDim2.new(0, 40, 1, 0)
+CountIcon.Position = UDim2.new(0, 5, 0, 0)
+CountIcon.BackgroundTransparency = 1
+CountIcon.Text = "⏱️"
+CountIcon.Font = Enum.Font.GothamBold
+CountIcon.TextSize = 18
+CountIcon.Parent = CountFrame
+
+local CountText = Instance.new("TextLabel")
+CountText.Size = UDim2.new(1, -50, 1, 0)
+CountText.Position = UDim2.new(0, 45, 0, 0)
+CountText.BackgroundTransparency = 1
+CountText.Text = "بدء بعد: --"
+CountText.TextColor3 = Color3.fromRGB(255, 180, 100)
+CountText.Font = Enum.Font.GothamBold
+CountText.TextSize = 13
+CountText.TextXAlignment = Enum.TextXAlignment.Left
+CountText.Parent = CountFrame
+
+-- ═══ السجل ═══
+local LogFrame = Instance.new("Frame")
+LogFrame.Size = UDim2.new(1, -30, 0, 130)
+LogFrame.Position = UDim2.new(0, 15, 0, 240)
+LogFrame.BackgroundColor3 = Color3.fromRGB(8, 9, 14)
+LogFrame.BorderSizePixel = 0
+LogFrame.Parent = F
+Instance.new("UICorner", LogFrame).CornerRadius = UDim.new(0, 12)
+
+local LogStroke = Instance.new("UIStroke")
+LogStroke.Color = Color3.fromRGB(40, 45, 70)
+LogStroke.Thickness = 1
+LogStroke.Parent = LogFrame
+
+local LogScroll = Instance.new("ScrollingFrame")
+LogScroll.Size = UDim2.new(1, -12, 1, -12)
+LogScroll.Position = UDim2.new(0, 6, 0, 6)
+LogScroll.BackgroundTransparency = 1
+LogScroll.BorderSizePixel = 0
+LogScroll.ScrollBarThickness = 4
+LogScroll.ScrollBarImageColor3 = Color3.fromRGB(120, 100, 255)
+LogScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+LogScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+LogScroll.Parent = LogFrame
+
+local Log = Instance.new("TextLabel")
+Log.Size = UDim2.new(1, -8, 0, 0)
+Log.Position = UDim2.new(0, 4, 0, 0)
+Log.BackgroundTransparency = 1
+Log.Text = "✦ جاهز"
+Log.TextColor3 = Color3.fromRGB(180, 210, 255)
+Log.Font = Enum.Font.Code
+Log.TextSize = 10
+Log.TextWrapped = true
+Log.TextXAlignment = Enum.TextXAlignment.Left
+Log.TextYAlignment = Enum.TextYAlignment.Top
+Log.AutomaticSize = Enum.AutomaticSize.Y
+Log.Parent = LogScroll
+
+-- ═══ الأزرار ═══
+local StartBtn = Instance.new("TextButton")
+StartBtn.Size = UDim2.new(1, -30, 0, 48)
+StartBtn.Position = UDim2.new(0, 15, 1, -168)
+StartBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+StartBtn.Text = "▶️ ابدأ الآن"
+StartBtn.TextColor3 = Color3.new(1,1,1)
+StartBtn.Font = Enum.Font.GothamBold
+StartBtn.TextSize = 13
+StartBtn.AutoButtonColor = false
+StartBtn.Parent = F
+Instance.new("UICorner", StartBtn).CornerRadius = UDim.new(0, 14)
+
+local StartGrad = Instance.new("UIGradient")
+StartGrad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 210, 120)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 160, 200))
+}
+StartGrad.Rotation = 30
+StartGrad.Parent = StartBtn
+
+local FreezeBtn = Instance.new("TextButton")
+FreezeBtn.Size = UDim2.new(0.5, -20, 0, 40)
+FreezeBtn.Position = UDim2.new(0, 15, 1, -114)
+FreezeBtn.BackgroundColor3 = Color3.fromRGB(60, 120, 180)
+FreezeBtn.Text = "🧊 جمّد"
+FreezeBtn.TextColor3 = Color3.new(1,1,1)
+FreezeBtn.Font = Enum.Font.GothamBold
+FreezeBtn.TextSize = 11
+FreezeBtn.AutoButtonColor = false
+FreezeBtn.Parent = F
+Instance.new("UICorner", FreezeBtn).CornerRadius = UDim.new(0, 12)
+
+local AutoFreezeBtn = Instance.new("TextButton")
+AutoFreezeBtn.Size = UDim2.new(0.5, -20, 0, 40)
+AutoFreezeBtn.Position = UDim2.new(0.5, 5, 1, -114)
+AutoFreezeBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 160)
+AutoFreezeBtn.Text = "🧊 تلقائي: تشغيل"
+AutoFreezeBtn.TextColor3 = Color3.new(1,1,1)
+AutoFreezeBtn.Font = Enum.Font.GothamBold
+AutoFreezeBtn.TextSize = 10
+AutoFreezeBtn.AutoButtonColor = false
+AutoFreezeBtn.Parent = F
+Instance.new("UICorner", AutoFreezeBtn).CornerRadius = UDim.new(0, 12)
+
+local StopBtn = Instance.new("TextButton")
+StopBtn.Size = UDim2.new(1, -30, 0, 40)
+StopBtn.Position = UDim2.new(0, 15, 1, -66)
+StopBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 60)
+StopBtn.Text = "⏹️ إيقاف"
+StopBtn.TextColor3 = Color3.new(1,1,1)
+StopBtn.Font = Enum.Font.GothamBold
+StopBtn.TextSize = 12
+StopBtn.AutoButtonColor = false
+StopBtn.Parent = F
+Instance.new("UICorner", StopBtn).CornerRadius = UDim.new(0, 12)
+
+-- ═══ Logging ═══
+local logs = {}
+local function log(m)
+    table.insert(logs, m)
+    if #logs > 15 then table.remove(logs, 1) end
+    Log.Text = table.concat(logs, "\n")
+    task.wait()
+    pcall(function() LogScroll.CanvasPosition = Vector2.new(0, 99999) end)
+    print("[KW] " .. m)
+end
+
+local function setStatus(txt, col)
+    StatusText.Text = txt
+    StatusDot.BackgroundColor3 = col or Color3.fromRGB(120, 120, 140)
+end
+
+local function updateFreezeBadge()
+    if isFrozen then
+        FreezeBadge.Text = "🧊 مجمد"
+        FreezeBadge.BackgroundColor3 = Color3.fromRGB(50, 100, 150)
+        FreezeBadge.TextColor3 = Color3.fromRGB(150, 220, 255)
+    else
+        FreezeBadge.Text = "🧊 غير مجمد"
+        FreezeBadge.BackgroundColor3 = Color3.fromRGB(40, 60, 80)
+        FreezeBadge.TextColor3 = Color3.fromRGB(150, 200, 220)
+    end
+end
+
+-- فتح/إغلاق
+local function openPanel()
+    F.Visible = true
+    F.Size = UDim2.new(0, 240, 0, 380)
+    F.Position = UDim2.new(0.5, -120, 0.5, -190)
+    TweenService:Create(F, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 320, 0, 520),
+        Position = UDim2.new(0.5, -160, 0.5, -260)
+    }):Play()
+end
+
+local function closePanel()
+    TweenService:Create(F, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        Size = UDim2.new(0, 240, 0, 380),
+        Position = UDim2.new(0.5, -120, 0.5, -190)
+    }):Play()
+    task.wait(0.2)
+    F.Visible = false
+end
+
+Btn.MouseButton1Click:Connect(function()
+    if F.Visible then closePanel() else openPanel() end
+end)
+XBtn.MouseButton1Click:Connect(closePanel)
+
+-- سحب
+local drag, dIn, sPos, fPos
+Header.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then
+        drag = true; sPos = i.Position; fPos = F.Position
+        i.Changed:Connect(function() if i.UserInputState == Enum.UserInputState.End then drag = false end end)
+    end
+end)
+Header.InputChanged:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseMovement then dIn = i end
+end)
+game:GetService("UserInputService").InputChanged:Connect(function(i)
+    if i == dIn and drag then
+        local d = i.Position - sPos
+        F.Position = UDim2.new(fPos.X.Scale, fPos.X.Offset + d.X, fPos.Y.Scale, fPos.Y.Offset + d.Y)
+    end
+end)
+
+-- ═══ Helpers ═══
+local function getHRP()
+    return LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+end
+
+local function hasTool()
+    local keys = {"فاتح", "متقدم", "advanced", "lockpick"}
+    local function chk(n)
+        local x = n:lower()
+        for _, k in ipairs(keys) do 
+            if x:find(k:lower()) then return true end 
+        end
+        return false
+    end
+    if LP.Character then
+        for _, t in ipairs(LP.Character:GetChildren()) do
+            if t:IsA("Tool") and chk(t.Name) then return t end
+        end
+    end
+    local bp = LP:FindFirstChild("Backpack")
+    if bp then
+        for _, t in ipairs(bp:GetChildren()) do
+            if t:IsA("Tool") and chk(t.Name) then return t end
+        end
+    end
+    return nil
+end
+
+local function clickGui(g)
+    if not g then return false end
+    local clicked = false
+    pcall(function()
+        if getconnections then
+            for _, c in pairs(getconnections(g.MouseButton1Click)) do
+                if c.Function then task.spawn(c.Function); clicked = true end
+            end
+            for _, c in pairs(getconnections(g.MouseButton1Down)) do
+                if c.Function then task.spawn(c.Function); clicked = true end
+            end
+            for _, c in pairs(getconnections(g.InputBegan)) do
+                if c.Function then 
+                    task.spawn(c.Function, {UserInputType = Enum.UserInputType.Touch})
+                    clicked = true 
+                end
+            end
+            for _, c in pairs(getconnections(g.Activated)) do
+                if c.Function then task.spawn(c.Function); clicked = true end
+            end
+        end
+    end)
+    pcall(function() g:Activate() end)
+    pcall(function()
+        local ap = g.AbsolutePosition
+        local as = g.AbsoluteSize
+        if as.X > 5 and ap.X > 0 then
+            local cx = ap.X + as.X/2
+            local cy = ap.Y + as.Y/2
+            VIM:SendMouseButtonEvent(cx, cy, 0, true, game, 1)
+            task.wait(0.03)
+            VIM:SendMouseButtonEvent(cx, cy, 0, false, game, 1)
+            clicked = true
+        end
+    end)
+    return clicked
+end
+
+local function findBtn(root, names)
+    if not root then return nil end
+    for _, obj in ipairs(root:GetDescendants()) do
+        if obj:IsA("TextButton") or obj:IsA("ImageButton") then
+            for _, n in ipairs(names) do
+                if obj.Name:lower() == n:lower() then return obj end
+            end
+        end
+    end
+    return nil
+end
+
+-- ═══ شراء ═══
+local function buy()
+    log("💰 شراء...")
+    setStatus("💰 شراء...", Color3.fromRGB(255, 180, 60))
+    
+    if hasTool() then log("✅ عندك الأداة"); return true end
+    
+    local seller = workspace:FindFirstChild("SellerNPC", true)
+    if not seller then log("❌ ما فيه بائع"); return false end
+    
+    local part = seller:IsA("BasePart") and seller or seller:FindFirstChildWhichIsA("BasePart", true)
+    if part then
+        local hrp = getHRP()
+        if hrp then
+            hrp.CFrame = CFrame.new(part.Position + Vector3.new(0, 3, 3))
+        end
+        task.wait(0.5)
+        freezeCharacter()
+        updateFreezeBadge()
+    end
+    
+    local p = seller:FindFirstChildWhichIsA("ProximityPrompt", true)
+    if p then
+        pcall(function()
+            p.HoldDuration = 0
+            p.RequiresLineOfSight = false
+            p.MaxActivationDistance = 99999
+            p.Enabled = true
+            fireproximityprompt(p)
+        end)
+    end
+    
+    local market, opened = nil, false
+    for i = 1, 20 do
+        if stopRequested then return false end
+        market = PG:FindFirstChild("Market")
+        if market then
+            local mf = market:FindFirstChild("MainFrame")
+            if mf and mf.Visible then opened = true; break end
+        end
+        task.wait(0.1)
+    end
+    if not opened then log("❌ Market ما فتح"); return false end
+    log("✅ Market فتح")
+    task.wait(0.6)
+    
+    local mf = market:FindFirstChild("MainFrame")
+    local list = mf:FindFirstChild("ItemsList")
+    if not list then return false end
+    
+    local target = nil
+    for _, item in ipairs(list:GetChildren()) do
+        if item:IsA("GuiObject") then
+            local txt = ""
+            for _, d in ipairs(item:GetDescendants()) do
+                if d:IsA("TextLabel") then
+                    local t = ""
+                    pcall(function() t = d.Text end)
+                    if t ~= "" then txt = txt .. " " .. t end
+                end
+            end
+            local low = txt:lower()
+            if low:find("lockpick") or low:find("advanced") or low:find("متقدم") or
+               (low:find("فاتح") and (low:find("قفل") or low:find("اقفال"))) then
+                target = item
+                break
+            end
+        end
+    end
+    if not target then return false end
+    
+    local addBtn = nil
+    for _, d in ipairs(target:GetDescendants()) do
+        if (d:IsA("TextButton") or d:IsA("ImageButton")) and 
+           (d.Name == "Click" or d.Name == "AddToCart" or d.Name == "Add") then
+            addBtn = d; break
+        end
+    end
+    if addBtn then clickGui(addBtn); task.wait(0.7) end
+    
+    local cart = mf:FindFirstChild("Cart")
+    if cart then
+        local buyFrame = cart:FindFirstChild("Buy")
+        local buyBtn = buyFrame and (findBtn(buyFrame, {"Click","Buy"}) or buyFrame) or findBtn(cart, {"Buy","Click"})
+        if buyBtn then clickGui(buyBtn); task.wait(0.7) end
+    end
+    
+    task.wait(0.6)
+    if hasTool() then log("🎉 وصلت!"); return true end
+    return false
+end
+
+-- ═══ سرقة ═══
+local function rob()
+    log("🏧 سرقة...")
+    setStatus("🏧 سرقة...", Color3.fromRGB(255, 80, 120))
+    
+    local tool = hasTool()
+    if tool and LP.Character then
+        local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum:EquipTool(tool) end
+    end
+    task.wait(0.2)
+    
+    local prompt, robPos = nil, CASHIER_POS
+    for _, p in ipairs(workspace:GetDescendants()) do
+        if p:IsA("ProximityPrompt") and p.Name == "StartProximity" then
+            prompt = p
+            local parent = p.Parent
+            local main = parent:FindFirstChild("MainCashier")
+            if main and main:IsA("BasePart") then
+                robPos = main.Position
+            elseif parent:IsA("BasePart") then
+                robPos = parent.Position
+            end
+            break
+        end
+    end
+    if not prompt then log("❌ ما فيه Prompt"); return false end
+    
+    local hrp = getHRP()
+    if hrp then
+        hrp.CFrame = CFrame.new(robPos + Vector3.new(0, 2.5, 2))
+        hrp.AssemblyLinearVelocity = Vector3.zero
+    end
+    task.wait(0.3)
+    
+    freezeCharacter()
+    updateFreezeBadge()
+    
+    pcall(function()
+        local cam = workspace.CurrentCamera
+        if cam then
+            cam.CameraType = Enum.CameraType.Custom
+            cam.CFrame = CFrame.lookAt(
+                robPos + Vector3.new(0, 3.5, 5),
+                robPos + Vector3.new(0, 1.2, 0)
+            )
+            cam.Focus = CFrame.new(robPos + Vector3.new(0, 1.2, 0))
+        end
+    end)
+    task.wait(0.3)
+    
+    pcall(function()
+        prompt.HoldDuration = 0
+        prompt.RequiresLineOfSight = false
+        prompt.MaxActivationDistance = 99999
+        prompt.Enabled = true
+    end)
+    
+    if not prompt.Enabled then log("⚠️ مقفل"); return false end
+    
+    local uiBtn = nil
+    for i = 1, 20 do
+        if stopRequested then return false end
+        pcall(function()
+            local cam = workspace.CurrentCamera
+            if cam then
+                cam.CFrame = CFrame.lookAt(
+                    robPos + Vector3.new(0, 3.5, 5),
+                    robPos + Vector3.new(0, 1.2, 0)
+                )
+            end
+        end)
+        
+        local pgui = PG:FindFirstChild("ProximityPrompts")
+        if pgui then
+            for _, obj in ipairs(pgui:GetDescendants()) do
+                if (obj:IsA("TextButton") or obj:IsA("ImageButton")) and obj.AbsoluteSize.X > 30 then
+                    uiBtn = obj; break
+                end
+            end
+        end
+        if uiBtn then break end
+        task.wait(0.1)
+    end
+    
+    pcall(function() fireproximityprompt(prompt) end)
+    pcall(function()
+        VIM:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+        task.wait(0.05)
+        VIM:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+    end)
+    
+    if uiBtn then
+        local ap = uiBtn.AbsolutePosition
+        local as = uiBtn.AbsoluteSize
+        local cx = ap.X + as.X/2
+        local cy = ap.Y + as.Y/2
+        pcall(function()
+            VIM:SendMouseButtonEvent(cx, cy, 0, true, game, 1)
+            task.wait(0.2)
+            VIM:SendMouseButtonEvent(cx, cy, 0, false, game, 1)
+        end)
+        pcall(function()
+            for _, c in pairs(getconnections(uiBtn.InputBegan)) do
+                if c.Function then
+                    task.spawn(c.Function, {
+                        UserInputType = Enum.UserInputType.Touch,
+                        UserInputState = Enum.UserInputState.Begin,
+                        Position = Vector3.new(cx, cy, 0),
+                    })
+                end
+            end
+        end)
+        pcall(function() uiBtn:Activate() end)
+    end
+    
+    local startT = tick()
+    while tick() - startT < 5 do
+        if stopRequested then break end
+        pcall(function()
+            local cam = workspace.CurrentCamera
+            if cam then
+                cam.CFrame = CFrame.lookAt(
+                    robPos + Vector3.new(0, 3.5, 5),
+                    robPos + Vector3.new(0, 1.2, 0)
+                )
+            end
+        end)
+        task.wait(0.15)
+    end
+    
+    log("🎉 خلصت السرقة")
+    return true
+end
+
+-- ═══ Server Hop ═══
+local function hopServer(preferEmpty)
+    log("🌐 نبحث عن سيرفر فاضي...")
+    setStatus("🌐 Server Hop...", Color3.fromRGB(150, 200, 255))
+    
+    unfreezeCharacter()
+    updateFreezeBadge()
+    
+    local queueCode = string.format([[
+        wait(5)
+        local url = "%s"
+        local ok, s = pcall(function()
+            return game:HttpGet(url)
+        end)
+        if ok and s then
+            loadstring(s)()
+        end
+    ]], SCRIPT_URL)
+    
+    local saved = false
+    pcall(function()
+        if queue_on_teleport then queue_on_teleport(queueCode); saved = true end
+    end)
+    if not saved then
+        pcall(function()
+            if syn and syn.queue_on_teleport then syn.queue_on_teleport(queueCode); saved = true end
+        end)
+    end
+    if not saved then
+        pcall(function()
+            if fluxus and fluxus.queue_on_teleport then fluxus.queue_on_teleport(queueCode); saved = true end
+        end)
+    end
+    
+    task.wait(1)
+    
+    local servers = {}
+    pcall(function()
+        servers = TS:GetPublicServersAsync(game.PlaceId)
+    end)
+    
+    if #servers == 0 then
+        log("⚠️ Teleport عادي")
+        pcall(function() TS:Teleport(game.PlaceId) end)
+        return
+    end
+    
+    local currentJob = game.JobId
+    local emptyServers, lowServers, anyServers = {}, {}, {}
+    
+    for _, s in ipairs(servers) do
+        if s.id ~= currentJob and s.playing < s.maxPlayers then
+            table.insert(anyServers, s)
+            if s.playing == 0 then
+                table.insert(emptyServers, s)
+            elseif s.playing <= CONFIG.MaxPlayersInServer then
+                table.insert(lowServers, s)
+            end
+        end
+    end
+    
+    log("🟢 فاضية: " .. #emptyServers .. " | 🟡 قليل: " .. #lowServers)
+    
+    local pick = nil
+    if preferEmpty and #emptyServers > 0 then
+        pick = emptyServers[math.random(1, #emptyServers)]
+        log("✅ اخترنا سيرفر فاضي!")
+    elseif #lowServers > 0 then
+        pick = lowServers[math.random(1, #lowServers)]
+        log("✅ سيرفر بشوية لاعبين")
+    elseif #anyServers > 0 then
+        table.sort(anyServers, function(a, b) return a.playing < b.playing end)
+        pick = anyServers[1]
+    end
+    
+    if pick then
+        log("🎯 " .. pick.id:sub(1, 8) .. " (" .. pick.playing .. "/" .. pick.maxPlayers .. ")")
+        pcall(function()
+            TS:TeleportToPlaceInstance(game.PlaceId, pick.id)
+        end)
+    else
+        pcall(function() TS:Teleport(game.PlaceId) end)
+    end
+end
+
+-- ═══ عداد تنازلي ═══
+local function countdown(seconds, message)
+    message = message or "بدء بعد"
+    for i = seconds, 1, -1 do
+        if stopRequested then return false end
+        CountText.Text = message .. ": " .. i .. "s"
+        task.wait(1)
+    end
+    CountText.Text = message .. ": --"
+    return true
+end
+
+-- ═══ AUTO LOOP ═══
+local function autoLoop()
+    if isRunning then return end
+    isRunning = true
+    stopRequested = false
+    
+    log("♻️ بدء الدورة")
+    
+    task.spawn(function()
+        while not stopRequested do
+            currentLoop = currentLoop + 1
+            LoopNum.Text = tostring(currentLoop)
+            
+            log("")
+            log("━━━ الدورة #" .. currentLoop .. " ━━━")
+            
+            -- انتظار تحميل اللعبة
+            log("⏳ انتظار التحميل...")
+            local waited = 0
+            while (not LP.Character or not LP.Character:FindFirstChild("HumanoidRootPart")) and not stopRequested do
+                task.wait(0.5)
+                waited = waited + 0.5
+                if waited > 30 then break end
+            end
+            
+            -- 🧊 تجميد
+            freezeCharacter()
+            updateFreezeBadge()
+            
+            -- ⏱️ انتظار 23 ثانية
+            log("⏱️ انتظار " .. CONFIG.StartDelay .. " ثانية...")
+            setStatus("⏱️ " .. CONFIG.StartDelay .. "s...", Color3.fromRGB(255, 180, 60))
+            
+            if not countdown(CONFIG.StartDelay, "بدء بعد") then break end
+            
+            log("✅ جاهز - بدء التنفيذ!")
+            setStatus("▶️ بدء...", Color3.fromRGB(80, 220, 120))
+            
+            -- شراء
+            if not hasTool() then
+                unfreezeCharacter()
+                updateFreezeBadge()
+                buy()
+                task.wait(1)
+                freezeCharacter()
+                updateFreezeBadge()
+            else
+                log("✅ عندك الأداة")
+            end
+            
+            -- سرقة
+            if hasTool() then
+                unfreezeCharacter()
+                updateFreezeBadge()
+                task.wait(0.2)
+                rob()
+            else
+                log("⚠️ ما عندك الأداة")
+            end
+            
+            -- انتظار قبل الهوب
+            log("⏱️ انتظار قبل الهوب...")
+            if not countdown(CONFIG.WaitBetweenServers, "هوب بعد") then break end
+            
+            -- هوب
             if not stopRequested then
                 hopServer(CONFIG.PreferEmpty)
                 task.wait(15)
