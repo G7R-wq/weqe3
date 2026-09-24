@@ -1,8 +1,9 @@
 -- ==========================================
 -- ♻️ KW Cashier - Server Hop + Auto Loop
+-- الرابط: https://raw.githubusercontent.com/G7R-wq/weqe3/refs/heads/main/seer2
 -- ==========================================
 
--- ⚠️ ضع رابط السكربت الـ Raw هنا
+-- ⚠️ الرابط الصحيح للسكربت (Raw)
 local SCRIPT_URL = "https://raw.githubusercontent.com/G7R-wq/weqe3/refs/heads/main/seer2"
 
 local LP = game:GetService("Players").LocalPlayer
@@ -212,7 +213,7 @@ local function findBtn(root, names)
     return nil
 end
 
--- ═══ شراء (مختصر) ═══
+-- ═══ شراء ═══
 local function buy()
     log("💰 شراء...")
     if hasTool() then log("✅ عندك الأداة"); return true end
@@ -299,7 +300,7 @@ local function buy()
     return false
 end
 
--- ═══ سرقة (مختصر) ═══
+-- ═══ سرقة ═══
 local function rob()
     log("🏧 سرقة...")
     
@@ -326,7 +327,6 @@ local function rob()
     end
     if not prompt then log("❌ ما فيه Prompt"); return false end
     
-    -- انتقل + كاميرا
     local hrp = getHRP()
     if hrp then
         hrp.CFrame = CFrame.new(robPos + Vector3.new(0, 2.5, 2))
@@ -356,7 +356,6 @@ local function rob()
     
     if not prompt.Enabled then log("⚠️ مقفل"); return false end
     
-    -- ننتظر الزر + نعيد الكاميرا
     local uiBtn = nil
     for i = 1, 20 do
         pcall(function()
@@ -381,7 +380,6 @@ local function rob()
         task.wait(0.1)
     end
     
-    -- ضغط
     pcall(function() fireproximityprompt(prompt) end)
     pcall(function()
         VIM:SendKeyEvent(true, Enum.KeyCode.E, false, game)
@@ -413,7 +411,6 @@ local function rob()
         pcall(function() uiBtn:Activate() end)
     end
     
-    -- ننتظر + نعيد الكاميرا عشان الزر
     local startT = tick()
     while tick() - startT < 5 do
         pcall(function()
@@ -433,56 +430,100 @@ local function rob()
 end
 
 -- ═══════════════════════════════════════
--- 🌐 SERVER HOP
+-- 🌐 SERVER HOP (معدل)
 -- ═══════════════════════════════════════
 local function hopServer()
     log("🌐 ننتقل لسيرفر ثاني...")
     
     -- ✅ نحفظ السكربت عشان يشتغل بعد الانتقال
-    local success = false
+    local queueCode = string.format([[
+        wait(5)
+        local url = "%s"
+        local ok, script = pcall(function()
+            return game:HttpGet(url)
+        end)
+        if ok and script then
+            loadstring(script)()
+        end
+    ]], SCRIPT_URL)
+    
+    local saved = false
+    
+    -- طريقة 1
     pcall(function()
         if queue_on_teleport then
-            queue_on_teleport([[
-                -- بعد الانتقال، نشغل السكربت من الرابط
-                wait(3)
-                local url = "]] .. SCRIPT_URL .. [["
-                local ok, script = pcall(function()
-                    return game:HttpGet(url)
-                end)
-                if ok and script then
-                    loadstring(script)()
-                end
-            ]])
-            success = true
-        elseif syn and syn.queue_on_teleport then
-            syn.queue_on_teleport([[
-                wait(3)
-                local url = "]] .. SCRIPT_URL .. [["
-                local ok, script = pcall(function()
-                    return game:HttpGet(url)
-                end)
-                if ok and script then
-                    loadstring(script)()
-                end
-            ]])
-            success = true
+            queue_on_teleport(queueCode)
+            saved = true
+            log("✅ محفوظ (queue_on_teleport)")
         end
     end)
     
-    if success then
-        log("✅ حفظنا السكربت للانتقال")
-    else
-        log("⚠️ queue_on_teleport غير مدعوم")
+    -- طريقة 2
+    if not saved then
+        pcall(function()
+            if syn and syn.queue_on_teleport then
+                syn.queue_on_teleport(queueCode)
+                saved = true
+                log("✅ محفوظ (syn)")
+            end
+        end)
     end
     
-    -- ✅ ننتقل
+    -- طريقة 3
+    if not saved then
+        pcall(function()
+            if fluxus and fluxus.queue_on_teleport then
+                fluxus.queue_on_teleport(queueCode)
+                saved = true
+                log("✅ محفوظ (fluxus)")
+            end
+        end)
+    end
+    
+    if not saved then
+        log("⚠️ الـ Executor ما يدعم الحفظ التلقائي")
+    end
+    
+    -- ✅ ننتقل باستخدام GetPublicServersAsync (أفضل من Teleport عادي)
     task.wait(1)
+    
+    local servers = {}
     pcall(function()
-        local TS = game:GetService("TeleportService")
-        TS:Teleport(game.PlaceId)
+        servers = TS:GetPublicServersAsync(game.PlaceId)
     end)
     
-    log("🚀 تم الانتقال")
+    local currentJob = game.JobId
+    local available = {}
+    
+    for _, s in ipairs(servers) do
+        if s.id ~= currentJob and s.playing < s.maxPlayers then
+            table.insert(available, s)
+        end
+    end
+    
+    log("📊 سيرفرات متاحة: " .. #available)
+    
+    if #available > 0 then
+        local pick = available[math.random(1, #available)]
+        log("🎯 اخترنا: " .. pick.id:sub(1, 8))
+        log("👥 " .. pick.playing .. "/" .. pick.maxPlayers)
+        
+        local ok = pcall(function()
+            TS:TeleportToPlaceInstance(game.PlaceId, pick.id)
+        end)
+        
+        if ok then
+            log("🚀 تم!")
+        else
+            log("❌ فشل - نجرب Teleport عادي")
+            pcall(function() TS:Teleport(game.PlaceId) end)
+        end
+    else
+        log("⚠️ ما فيه سيرفرات - نجرب Teleport عادي")
+        pcall(function()
+            TS:Teleport(game.PlaceId)
+        end)
+    end
 end
 
 -- ═══════════════════════════════════════
@@ -527,6 +568,6 @@ StopBtn.MouseButton1Click:Connect(function()
     log("⏹️ إيقاف")
 end)
 
-log("✦ جاهز - ارفع السكربت على Pastebin")
-log("→ وضع الرابط في SCRIPT_URL")
+log("✦ جاهز")
+log("→ الرابط: " .. SCRIPT_URL:sub(1, 50) .. "...")
 print("[KWHop] ✅ Loaded")
