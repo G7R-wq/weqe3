@@ -1,0 +1,834 @@
+export default {
+  async fetch(request) {
+    const ua = (request.headers.get("User-Agent") || "").toLowerCase();
+    const isBrowser = 
+      ua.includes("mozilla") && 
+      ua.includes("applewebkit") && 
+      ua.includes("chrome") &&
+      !ua.includes("roblox");
+
+    if (isBrowser) {
+      return new Response("404 Not Found", { 
+        status: 404,
+        headers: { "Content-Type": "text/plain" }
+      });
+    }
+
+    const luaCode = `--[[
+======================================================
+   we server v2.0 - Ultra Fast Response
+   - ⚡ سرعة استجابة عالية: تأخير < 0.5 ثانية بعد التسليم
+   - 💤 سكون ذكي: لا يستهلك موارد عند عدم وجود طلبات
+   - 📦 تحقق سريع من الطرد + إعادة استلام فورية
+   - 🛡️ منع تكرار السعر + أداء مستقر
+======================================================
+]]
+
+local Players                = game:GetService("Players")
+local VirtualInputManager    = game:GetService("VirtualInputManager")
+local ProximityPromptService = game:GetService("ProximityPromptService")
+local VirtualUser            = game:GetService("VirtualUser")
+local GuiService             = game:GetService("GuiService")
+local Lighting               = game:GetService("Lighting")
+
+local player    = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local gethui = gethui or function() return game:GetService("CoreGui") end
+
+-- ⏱️ الإعدادات (تم ضبطها للسرعة القصوى)
+local CFG = {
+    START_DELAY            = 3,
+    CLICK_DELAY            = 3,
+    NEW_ORDER_WAIT         = 1.5,
+    OK_DIST                = 12,
+    STORE_TIMEOUT          = 15,
+    BOT_TIMEOUT            = 20,
+    MAX_BOT_TRIES          = 6,
+    DELIVERED_KEEP         = 180,
+    PRICE_KEEP             = 180,
+    READ_RETRIES           = 4,
+    READ_WAIT              = 0.3,
+    BOT_CHECK_WAIT         = 0.4,
+    CHECK_INTERVAL         = 0.3,
+    IDLE_CHECK_INTERVAL    = 1.0,
+    POST_DELIVERY_COOLDOWN = 2,
+    Offset_Y               = 3,
+    REQUIRE_PRICE          = false,
+    RE_PICKUP_ATTEMPTS     = 3,
+    RE_PICKUP_WAIT         = 0.6,
+}
+
+local START_TIME = tick()
+
+-------------------------------------------------
+-- 🧠 الحالة العامة
+-------------------------------------------------
+local autoRunning = false
+local loopRunning = false
+local autoAcceptRunning = false
+
+local completed = 0
+local cooldown = 0
+local mjWasVisible = false
+local RESPAWN_FLAG = false
+
+local CACHE = { storeLine = nil, storeNames = {}, priceLine = nil }
+local deliveredHistory = {}
+local deliveredPrices = {}
+
+local lastDeliveryTime = 0
+local currentProcessingContent = nil
+local isProcessing = false
+
+local cachedBots = nil
+local cachedBotsTime = 0
+local cachedGuiState = false
+local cachedGuiTime = 0
+
+-------------------------------------------------
+-- 🎨 UI Setup
+-------------------------------------------------
+local guiParent = playerGui
+pcall(function() local h = gethui() if h then guiParent = h end end)
+pcall(function() if guiParent:FindFirstChild("we_server") then guiParent.we_server:Destroy() end end)
+pcall(function() if playerGui:FindFirstChild("we_server") then playerGui.we_server:Destroy() end end)
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "we_server"
+screenGui.ResetOnSpawn = false
+screenGui.DisplayOrder = 999999
+pcall(function() screenGui.Parent = guiParent end)
+if not screenGui.Parent then screenGui.Parent = playerGui end
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 330, 0, 260)
+frame.Position = UDim2.new(0, 20, 0, 60)
+frame.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+frame.Parent = screenGui
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(150, 50, 255)
+stroke.Thickness = 2
+stroke.Parent = frame
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -16, 0, 22)
+title.Position = UDim2.new(0, 8, 0, 2)
+title.BackgroundTransparency = 1
+title.Text = "🚀 we server v2.0 (Ultra)"
+title.TextColor3 = Color3.fromRGB(180, 100, 255)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 12
+title.Parent = frame
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(1, -16, 0, 34)
+toggleBtn.Position = UDim2.new(0, 8, 0, 26)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(100, 50, 180)
+toggleBtn.Text = "🚚 تشغيل"
+toggleBtn.TextColor3 = Color3.new(1,1,1)
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 12
+toggleBtn.BorderSizePixel = 0
+toggleBtn.Parent = frame
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 6)
+
+local function mkLine(y, color)
+    local l = Instance.new("TextLabel")
+    l.Size = UDim2.new(1, -16, 0, 16)
+    l.Position = UDim2.new(0, 8, 0, y)
+    l.BackgroundTransparency = 1
+    l.Text = "-"
+    l.TextColor3 = color
+    l.Font = Enum.Font.Gotham
+    l.TextSize = 10
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.TextWrapped = true
+    l.Parent = frame
+    return l
+end
+
+local timerLbl  = mkLine(64, Color3.fromRGB(255, 200, 100))
+local afkLbl    = mkLine(80, Color3.fromRGB(180, 100, 255))
+local statusLbl = mkLine(96, Color3.fromRGB(200, 200, 200))
+local stepLbl   = mkLine(112, Color3.fromRGB(255, 220, 120))
+local storeLbl  = mkLine(128, Color3.fromRGB(180, 100, 255))
+local priceLbl  = mkLine(144, Color3.fromRGB(100, 255, 150))
+local botLbl    = mkLine(160, Color3.fromRGB(255, 200, 150))
+local countLbl  = mkLine(176, Color3.fromRGB(180, 100, 255))
+local cacheLbl  = mkLine(192, Color3.fromRGB(180, 200, 220))
+local mapLbl    = mkLine(208, Color3.fromRGB(255, 180, 100))
+local keepLbl   = mkLine(224, Color3.fromRGB(150, 220, 255))
+
+statusLbl.Text = "⚡ متوقف"
+stepLbl.Text = "جاهز"
+storeLbl.Text = "🏪 -"
+priceLbl.Text = "💰 -"
+botLbl.Text = "🤖 -"
+countLbl.Text = "🎯 المهام: 0"
+cacheLbl.Text = "💾 0 مسلّم"
+mapLbl.Text = "🗺️ غير مخفف"
+afkLbl.Text = "🛡️ Anti-AFK: يعمل"
+keepLbl.Text = "🧠 منع السعر: " .. (CFG.PRICE_KEEP == math.huge and "دائم" or CFG.PRICE_KEEP.."ث")
+
+-------------------------------------------------
+-- ⏱️ Timer
+-------------------------------------------------
+task.spawn(function()
+    while true do
+        local s = math.floor(tick() - START_TIME)
+        local m, h = math.floor(s/60)%60, math.floor(s/3600)
+        timerLbl.Text = h > 0 and string.format("⏱️ %02d:%02d:%02d", h, m, s%60) or string.format("⏱️ %02d:%02d", m, s%60)
+        task.wait(1)
+    end
+end)
+
+-------------------------------------------------
+-- 🗺️ Store Map & Helpers
+-------------------------------------------------
+local STORE_MAP = {
+    ["الفيك"]="Al-Fake", ["فيك"]="Al-Fake",
+    ["الصيدلية"]="Pharmacy", ["صيدلية"]="Pharmacy", ["pharmacy"]="Pharmacy",
+    ["قهوة امجي"]="MJCoffee", ["قهوه امجي"]="MJCoffee", ["mjcoffee"]="MJCoffee",
+    ["الزينة"]="AccessoriesShop", ["زينة"]="AccessoriesShop",
+    ["ابو شمعة"]="AboSham3a", ["ابو شمعه"]="AboSham3a",
+    ["هارفن"]="harven", ["السوبرماركت"]="Supermarket", ["سوبرماركت"]="Supermarket",
+    ["لوحات"]="PlateShop", ["لوحة"]="PlateShop", ["متجر لوحات"]="PlateShop",
+    ["ربع"]="Quarter", ["الفاين"]="Fine", ["فاين"]="Fine",
+    ["رودو"]="RUDU", ["rudu"]="RUDU",
+}
+local GENERIC_WORDS = { "متجر", "محل", "store", "shop", "ال", "the" }
+
+local function getRoot()
+    local char = player.Character
+    if not char then return nil end
+    local r = char:FindFirstChild("HumanoidRootPart")
+    local h = char:FindFirstChildOfClass("Humanoid")
+    return (r and h and h.Health > 0) and r or nil
+end
+
+local function clean(s)
+    if not s then return "" end
+    return tostring(s):lower():gsub("[%p%c]", " "):gsub("%s+", " "):gsub("^%s+", ""):gsub("%s+$", "")
+end
+
+local function normalizeArabic(s)
+    if not s then return "" end
+    s = tostring(s):lower():gsub("[أإآ]", "ا"):gsub("ة", "ه"):gsub("ى", "ي"):gsub("[ؤئ]", "ي"):gsub("%s+", ""):gsub("^ال", "")
+    return s
+end
+
+local function mapStore(name)
+    local n = normalizeArabic(name)
+    if STORE_MAP[name] then return STORE_MAP[name] end
+    if STORE_MAP[n] then return STORE_MAP[n] end
+    for k, v in pairs(STORE_MAP) do if normalizeArabic(k) == n then return v end end
+    return nil
+end
+
+local function extractMeaningfulWords(text)
+    local words = {}
+    for word in string.gmatch(clean(text), "%S+") do
+        local w = word:gsub("^ال", "")
+        local isGen = false
+        for _, g in ipairs(GENERIC_WORDS) do if w == g or word == g then isGen = true break end end
+        if not isGen and #w >= 3 then table.insert(words, w) end
+    end
+    return words
+end
+
+local function extractPrice(text)
+    if not text then return nil end
+    local s = tostring(text):gsub(",", ""):gsub("%$", "")
+    local scope = s:find("سعر التوصيل", 1, true) and s:sub(s:find("سعر التوصيل", 1, true)) or s
+    local nums = {}
+    for n in scope:gmatch("%d+") do table.insert(nums, tonumber(n)) end
+    if #nums == 0 then for n in s:gmatch("%d+") do table.insert(nums, tonumber(n)) end end
+    return nums[#nums]
+end
+
+-------------------------------------------------
+-- 💾 Cache & History
+-------------------------------------------------
+local function getPriceKeep() return (CFG.PRICE_KEEP and CFG.PRICE_KEEP > 0) and CFG.PRICE_KEEP or CFG.DELIVERED_KEEP end
+
+local function cleanHistory()
+    local now, pk = tick(), getPriceKeep()
+    for k, t in pairs(deliveredHistory) do if now - t > CFG.DELIVERED_KEEP then deliveredHistory[k] = nil end end
+    for p, t in pairs(deliveredPrices) do if now - t > pk then deliveredPrices[p] = nil end end
+end
+
+local function addDelivered(content, price)
+    if not content then return end
+    deliveredHistory[content] = tick()
+    lastDeliveryTime = tick()
+    if price then
+        deliveredPrices[price] = tick()
+        priceLbl.Text = "💰 آخر سعر: " .. price
+        priceLbl.TextColor3 = Color3.fromRGB(100, 255, 150)
+    end
+    cleanHistory()
+end
+
+local function isRecentlyDelivered(c) 
+    local t = c and deliveredHistory[c] 
+    return t and (tick() - t <= CFG.DELIVERED_KEEP) 
+end
+
+local function isPriceBlocked(p)
+    if not p then return false end
+    local t = deliveredPrices[p]
+    if not t then return false end
+    if tick() - t > getPriceKeep() then deliveredPrices[p] = nil return false end
+    return true
+end
+
+local function countDelivered() local n=0 for _ in pairs(deliveredHistory) do n=n+1 end return n end
+local function resetAll() CACHE={storeLine=nil,storeNames={},priceLine=nil}; currentProcessingContent=nil; isProcessing=false end
+
+-------------------------------------------------
+-- 👀 Detection
+-------------------------------------------------
+local function hasMjDeliveryGui()
+    if tick() - cachedGuiTime < 0.3 then return cachedGuiState end
+    local found = false
+    pcall(function()
+        for _, sg in ipairs(playerGui:GetChildren()) do
+            if sg:IsA("ScreenGui") and sg.Enabled then
+                for _, lbl in ipairs(sg:GetDescendants()) do
+                    if (lbl:IsA("TextLabel") or lbl:IsA("TextButton")) and lbl.Visible and string.find(lbl.Text or "", "Mj Studios Delivery", 1, true) then
+                        found = true; return
+                    end
+                end
+            end
+        end
+    end)
+    cachedGuiState, cachedGuiTime = found, tick()
+    return found
+end
+
+local function isCarryingPackage()
+    local char = player.Character
+    if not char then return false end
+    for _, child in ipairs(char:GetChildren()) do
+        if child:IsA("Tool") then
+            local n = child.Name:lower()
+            if n:find("package") or n:find("box") or n:find("delivery") or n:find("طرد") or n:find("طلب") or n:find("parcel") then
+                return true
+            end
+        end
+    end
+    local bp = player:FindFirstChildOfClass("Backpack")
+    if bp then
+        for _, child in ipairs(bp:GetChildren()) do
+            if child:IsA("Tool") then
+                local n = child.Name:lower()
+                if n:find("package") or n:find("box") or n:find("delivery") or n:find("طرد") or n:find("طلب") then
+                    return true
+                end
+            end
+        end
+    end
+    return false
+end
+
+-------------------------------------------------
+-- 📖 Reading Data
+-------------------------------------------------
+local function tryReadOnce()
+    local newStoreLine, newPriceLine = nil, nil
+    pcall(function()
+        for _, sg in ipairs(playerGui:GetChildren()) do
+            if sg:IsA("ScreenGui") and sg.Enabled then
+                local hasTitle = false
+                for _, lbl in ipairs(sg:GetDescendants()) do
+                    if (lbl:IsA("TextLabel") or lbl:IsA("TextButton")) and lbl.Visible and string.find(lbl.Text or "", "Mj Studios Delivery", 1, true) then
+                        hasTitle = true; break
+                    end
+                end
+                if hasTitle then
+                    for _, lbl in ipairs(sg:GetDescendants()) do
+                        if (lbl:IsA("TextLabel") or lbl:IsA("TextButton")) and lbl.Visible then
+                            local t = lbl.Text or ""
+                            if #t > 1 and not string.find(t, "Mj Studios Delivery", 1, true) then
+                                if string.find(t, "|", 1, true) and not newStoreLine then newStoreLine = t end
+                                if (string.find(t, "سعر التوصيل", 1, true) or string.find(t, "السعر", 1, true)) and not newPriceLine then newPriceLine = t end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+    if newStoreLine then
+        local names = {}
+        for part in string.gmatch(newStoreLine, "[^|]+") do
+            local c = clean(part)
+            if #c >= 2 then table.insert(names, c); local w=c:gsub("^ال",""); if #w>=2 and w~=c then table.insert(names,w) end end
+        end
+        return {storeLine=newStoreLine, storeNames=names, priceLine=newPriceLine}
+    end
+    return nil
+end
+
+local function readMjDeliveryWithRetries()
+    for _=1, CFG.READ_RETRIES do
+        local r = tryReadOnce()
+        if r then CACHE.storeLine=r.storeLine; CACHE.storeNames=r.storeNames; CACHE.priceLine=r.priceLine; return r end
+        task.wait(CFG.READ_WAIT)
+    end
+    return nil
+end
+
+-------------------------------------------------
+-- 🎯 Teleport & Prompts
+-------------------------------------------------
+local function teleport(targetPos)
+    local root = getRoot()
+    if not root or not targetPos then return false end
+    if (root.Position - targetPos).Magnitude < CFG.OK_DIST then return true end
+    for _=1,5 do
+        if not getRoot() then return false end
+        pcall(function() root.CFrame = CFrame.new(targetPos + Vector3.new(0, CFG.Offset_Y, 0)); root.AssemblyLinearVelocity = Vector3.zero end)
+        task.wait(0.03)
+    end
+    task.wait(0.05)
+    local cur = getRoot()
+    return cur and (cur.Position - targetPos).Magnitude < CFG.OK_DIST
+end
+
+local function makeInstant(p)
+    if p and p:IsA("ProximityPrompt") then pcall(function() p.HoldDuration=0; p.MaxActivationDistance=math.huge; p.RequiresLineOfSight=false end) end
+end
+pcall(function() for _, o in ipairs(workspace:GetDescendants()) do makeInstant(o) end end)
+workspace.DescendantAdded:Connect(makeInstant)
+pcall(function() ProximityPromptService.PromptShown:Connect(makeInstant) end)
+
+local function firePrompt(prompt)
+    if not prompt or not prompt.Parent then return false end
+    makeInstant(prompt)
+    local success = false
+    pcall(function() if fireproximityprompt then fireproximityprompt(prompt); success=true end end)
+    if not success then pcall(function() ProximityPromptService:InputHoldBegin(prompt, player); task.wait(0.03); ProximityPromptService:InputHoldEnd(prompt, player); success=true end) end
+    if not success then pcall(function() ProximityPromptService:PromptButtonHoldBegan(prompt); success=true end) end
+    return success
+end
+
+local function findStorePrompt(storeNames)
+    if not storeNames or #storeNames == 0 then return nil, nil end
+    local ds = workspace:FindFirstChild("DeliverySystem")
+    local tp = ds and ds:FindFirstChild("TakePrompts")
+    if not tp then return nil, nil end
+    
+    local searchWords, seen = {}, {}
+    for _, name in ipairs(storeNames) do
+        local mapped = mapStore(name)
+        if mapped then local k=normalizeArabic(mapped); if not seen[k] then table.insert(searchWords,{word=k,priority=3}); seen[k]=true end end
+        for _, w in ipairs(extractMeaningfulWords(name)) do local nw=normalizeArabic(w); if #nw>=3 and not seen[nw] then table.insert(searchWords,{word=nw,priority=2}); seen[nw]=true end end
+        local n = normalizeArabic(name); if #n>=3 and not seen[n] then table.insert(searchWords,{word=n,priority=1}); seen[n]=true end
+    end
+    
+    local bestP, bestPos, bestScore = nil, nil, -1
+    for _, storeModel in ipairs(tp:GetChildren()) do
+        local smNorm = normalizeArabic(storeModel.Name or "")
+        local score = 0
+        for _, kw in ipairs(searchWords) do
+            if smNorm == kw.word then score = math.max(score, 1000*kw.priority)
+            elseif string.find(smNorm, kw.word, 1, true) then score = math.max(score, 200*kw.priority)
+            elseif string.find(kw.word, smNorm, 1, true) and #smNorm>=3 then score = math.max(score, 100*kw.priority) end
+        end
+        if score > 0 then
+            for _, p in ipairs(storeModel:GetDescendants()) do
+                if p:IsA("ProximityPrompt") and p.Enabled then
+                    local pos = (p.Parent:IsA("BasePart") and p.Parent.Position) or (p.Parent:IsA("Model") and p.Parent:GetPivot().Position)
+                    if pos and score > bestScore then
+                        local act, obj = clean(p.ActionText or ""), clean(p.ObjectText or "")
+                        if string.find(act.." "..obj, "استلام", 1, true) then bestP, bestPos, bestScore = p, pos, score end
+                    end
+                end
+            end
+        end
+    end
+    return bestP, bestPos
+end
+
+local function getAllBots()
+    if cachedBots and (tick() - cachedBotsTime < 0.8) then return cachedBots end
+    local list = {}
+    local npcs = workspace:FindFirstChild("NPCS")
+    if not npcs then return list end
+    local root = getRoot()
+    local myPos = root and root.Position or Vector3.zero
+    for _, npc in ipairs(npcs:GetChildren()) do
+        if npc ~= player.Character and string.match(npc.Name or "", "^{[%x%-]+}$") then
+            for _, desc in ipairs(npc:GetDescendants()) do
+                if desc:IsA("ProximityPrompt") and desc.Enabled then
+                    local act, obj = clean(desc.ActionText or ""), clean(desc.ObjectText or "")
+                    if string.find(desc.Name, "DeliveryOrder", 1, true) or string.find(act.." "..obj, "تسليم الطلبية", 1, true) then
+                        local pos = (desc.Parent:IsA("BasePart") and desc.Parent.Position) or (desc.Parent:IsA("Attachment") and desc.Parent.WorldPosition) or (desc.Parent:IsA("Model") and desc.Parent:GetPivot().Position)
+                        if pos then table.insert(list, {prompt=desc, pos=pos, dist=(pos-myPos).Magnitude}) end
+                    end
+                end
+            end
+        end
+    end
+    table.sort(list, function(a,b) return a.dist < b.dist end)
+    cachedBots, cachedBotsTime = list, tick()
+    return list
+end
+
+-------------------------------------------------
+-- 📷 Camera Click
+-------------------------------------------------
+local acceptWords = {"استلام", "قبول", "accept", "order", "طلب"}
+local function getAllAcceptButtons()
+    local buttons = {}
+    local ui = playerGui:FindFirstChild("DeliverySystemUI")
+    local mf = ui and ui:FindFirstChild("MainFrame")
+    local lh = mf and mf:FindFirstChild("ListHolder")
+    local list = lh and lh:FindFirstChild("List")
+    if not list then return buttons end
+    for _, order in ipairs(list:GetChildren()) do
+        if order:IsA("GuiObject") then
+            local content = order:FindFirstChild("Content")
+            if content then
+                local found = content:FindFirstChild("AcceptButton")
+                if not (found and found:IsA("TextButton") and found.Visible) then
+                    for _, b in ipairs(content:GetDescendants()) do
+                        if b:IsA("TextButton") and b.Visible then
+                            local n, t = b.Name:lower(), b.Text:lower()
+                            for _, w in ipairs(acceptWords) do if n:find(w,1,true) or t:find(w,1,true) then found=b; break end end
+                            if found then break end
+                        end
+                    end
+                end
+                if found and found.AbsoluteSize.X > 0 then table.insert(buttons, {btn=found, y=found.AbsolutePosition.Y}) end
+            end
+        end
+    end
+    table.sort(buttons, function(a,b) return a.y < b.y end)
+    return buttons
+end
+
+local function clickWithCamera(btn)
+    if not btn or not btn.Parent or not btn.Visible then return false end
+    local ap, as = btn.AbsolutePosition, btn.AbsoluteSize
+    if as.X<=0 or as.Y<=0 then return false end
+    local inset = GuiService:GetGuiInset()
+    local pos = {x=ap.X+as.X/2, y=ap.Y+as.Y/2+inset.Y}
+    pcall(function() VirtualInputManager:SendMouseMoveEvent(pos.x, pos.y, game) end)
+    task.wait(0.15)
+    pcall(function()
+        local cam = workspace.CurrentCamera
+        if cam then
+            local ray = cam:ViewportPointToRay(pos.x, pos.y)
+            local newLook = CFrame.lookAt(cam.CFrame.Position, ray.Origin + ray.Direction * 100)
+            cam.CFrame = cam.CFrame:Lerp(newLook, 0.5)
+        end
+    end)
+    pcall(function()
+        VirtualInputManager:SendMouseButtonEvent(pos.x, pos.y, 0, true, game, 1)
+        task.wait(0.03)
+        VirtualInputManager:SendMouseButtonEvent(pos.x, pos.y, 0, false, game, 1)
+    end)
+    pcall(function() if firesignal then firesignal(btn.MouseButton1Click) end; btn.MouseButton1Click:Fire() end)
+    return true
+end
+
+-------------------------------------------------
+-- 🗺️ Optimization & Anti-AFK
+-------------------------------------------------
+local mapOptimized = false
+local function optimizeMap()
+    if mapOptimized then return end
+    pcall(function()
+        Lighting.GlobalShadows=false; Lighting.ShadowSoftness=0; Lighting.Brightness=1
+        Lighting.Ambient=Color3.fromRGB(150,150,150); Lighting.OutdoorAmbient=Color3.fromRGB(150,150,150)
+        Lighting.FogEnd=100000; Lighting.FogStart=100000
+        for _,v in ipairs(Lighting:GetChildren()) do if v:IsA("BlurEffect") or v:IsA("SunRaysEffect") or v:IsA("BloomEffect") or v:IsA("DepthOfFieldEffect") or v:IsA("ColorCorrectionEffect") then v.Enabled=false end end
+        for _,v in ipairs(workspace:GetDescendants()) do
+            if v:IsA("ParticleEmitter") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") or v:IsA("Beam") or v:IsA("Trail") then pcall(function() v.Enabled=false end)
+            elseif v:IsA("Decal") or v:IsA("Texture") then pcall(function() v.Transparency=1 end)
+            elseif v:IsA("MeshPart") then pcall(function() v.RenderFidelity=Enum.RenderFidelity.Performance; v.Material=Enum.Material.Plastic; v.CastShadow=false end)
+            elseif v:IsA("BasePart") then pcall(function() v.Material=Enum.Material.Plastic; v.CastShadow=false end) end
+        end
+        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+    end)
+    mapOptimized = true
+end
+
+pcall(function() player.Idled:Connect(function() pcall(function() VirtualUser:CaptureController(); VirtualUser:ClickButton2(Vector2.new()) end) end) end)
+task.spawn(function() while true do task.wait(25); pcall(function() VirtualUser:CaptureController(); VirtualUser:ClickButton2(Vector2.new()) end) end end)
+pcall(function() player.CharacterAdded:Connect(function() RESPAWN_FLAG=true end) end)
+
+-------------------------------------------------
+-- 🤖 Bot Delivery Logic
+-------------------------------------------------
+local function tryDeliverToBot(botInfo, num)
+    if not autoRunning then return false end
+    if not hasMjDeliveryGui() then return true end 
+
+    stepLbl.Text = "📍 بوت " .. num .. ": انتقال"
+    local ok = teleport(botInfo.pos)
+    task.wait(0.1)
+    
+    if not autoRunning then return false end
+    if not hasMjDeliveryGui() then return true end
+    if not ok then return false end
+    if not (botInfo.prompt and botInfo.prompt.Parent) then return false end
+
+    if not isCarryingPackage() then
+        stepLbl.Text = "⚠️ الطرد مو بيدك! تخطي"
+        return false 
+    end
+
+    stepLbl.Text = "⚡ بوت " .. num .. ": ضغطة"
+    botLbl.Text = "🤖 بوت " .. num .. " (" .. math.floor(botInfo.dist) .. "m)"
+    
+    firePrompt(botInfo.prompt)
+    task.wait(CFG.BOT_CHECK_WAIT)
+    
+    if not hasMjDeliveryGui() or not isCarryingPackage() then
+        botLbl.Text = "🤖 بوت " .. num .. " ✅"
+        return true
+    end
+
+    botLbl.Text = "🤖 بوت " .. num .. " ❌ التالي"
+    return false
+end
+
+-------------------------------------------------
+-- 📦 Order Processing
+-------------------------------------------------
+local function processOrder(content, currentPrice)
+    if currentProcessingContent == content then stepLbl.Text="⚠️ نفس الطلب - تخطي"; return false end
+    if isProcessing then stepLbl.Text="⏳ شغال..."; return false end
+    
+    currentProcessingContent = content
+    isProcessing = true
+    
+    local data = readMjDeliveryWithRetries()
+    if not data then stepLbl.Text="⚠️ فشل قراءة"; isProcessing=false; currentProcessingContent=nil; return false end
+    
+    CACHE.storeLine=data.storeLine; CACHE.storeNames=data.storeNames; CACHE.priceLine=data.priceLine
+    storeLbl.Text = "🏪 " .. tostring(CACHE.storeLine or "-")
+    if currentPrice then priceLbl.Text="💰 الفلوس: "..currentPrice; priceLbl.TextColor3=Color3.fromRGB(100,255,150) end
+    
+    stepLbl.Text = "⏳ تحضير..."
+    task.wait(CFG.NEW_ORDER_WAIT)
+    if not autoRunning then isProcessing=false; currentProcessingContent=nil; return false end
+    
+    stepLbl.Text = "📍 بحث عن متجر..."
+    local storeP, storePos
+    local t0 = tick()
+    while tick()-t0 < CFG.STORE_TIMEOUT and autoRunning do
+        storeP, storePos = findStorePrompt(CACHE.storeNames)
+        if storePos then break end
+        task.wait(0.2)
+    end
+    
+    if not storePos or not autoRunning then stepLbl.Text="⚠️ ما فيه متجر"; isProcessing=false; currentProcessingContent=nil; return false end
+    
+    stepLbl.Text = "📍 انتقال للمتجر"
+    if not teleport(storePos) or not autoRunning then isProcessing=false; currentProcessingContent=nil; return false end
+    task.wait(0.1)
+    
+    stepLbl.Text = "📦 فحص الطرد..."
+    local hasPackage = isCarryingPackage()
+    
+    if not hasPackage then
+        stepLbl.Text = "🔄 جاري الاستلام..."
+        for attempt = 1, CFG.RE_PICKUP_ATTEMPTS do
+            if not autoRunning then break end
+            if storeP and storeP.Parent then
+                firePrompt(storeP)
+            else
+                local p2 = findStorePrompt(CACHE.storeNames)
+                if p2 then storeP = p2; firePrompt(p2) end
+            end
+            task.wait(CFG.RE_PICKUP_WAIT)
+            if isCarryingPackage() then
+                stepLbl.Text = "✅ تم الاستلام!"
+                hasPackage = true
+                break
+            end
+        end
+    else
+        stepLbl.Text = "✅ الطرد موجود"
+    end
+    
+    if not hasPackage then
+        stepLbl.Text = "❌ فشل الاستلام"
+        isProcessing = false
+        currentProcessingContent = nil
+        return false
+    end
+    
+    task.wait(0.2)
+    stepLbl.Text = "📍 بحث عن بوتات..."
+    local bots = {}
+    t0 = tick()
+    while tick()-t0 < CFG.BOT_TIMEOUT and autoRunning do
+        bots = getAllBots()
+        if #bots > 0 then break end
+        task.wait(0.2)
+    end
+    
+    if #bots == 0 or not autoRunning then stepLbl.Text="⚠️ ما فيه بوت"; isProcessing=false; currentProcessingContent=nil; return false end
+    botLbl.Text = "🤖 " .. #bots .. " بوت"
+    
+    local delivered = false
+    for i = 1, math.min(#bots, CFG.MAX_BOT_TRIES) do
+        if not autoRunning then break end
+        if not hasMjDeliveryGui() then delivered=true; break end
+        
+        local success = tryDeliverToBot(bots[i], i)
+        if success then delivered=true; break end
+        stepLbl.Text = "⚡ بوت " .. i .. " → التالي"
+    end
+    
+    isProcessing = false
+    currentProcessingContent = nil
+    
+    if delivered then
+        completed = completed + 1
+        countLbl.Text = "🎯 المهام: " .. completed
+        return true
+    else
+        stepLbl.Text = "⚠️ فشل التسليم"
+        return false
+    end
+end
+
+-------------------------------------------------
+-- 🔄 Main Loop
+-------------------------------------------------
+local function deliveryLoop()
+    stepLbl.Text = "⏳ بدء..."
+    for i = CFG.START_DELAY, 1, -1 do
+        if not autoRunning then return end
+        stepLbl.Text = "⏳ " .. i .. "..."
+        task.wait(1)
+    end
+    
+    resetAll(); cooldown=0; mjWasVisible=false
+    
+    while autoRunning do
+        if RESPAWN_FLAG then RESPAWN_FLAG=false; resetAll(); mjWasVisible=false; stepLbl.Text="💀 ريسباون..."; task.wait(1.5) end
+        
+        local hasMj = hasMjDeliveryGui()
+        
+        if not hasMj then
+            mjWasVisible = false
+            stepLbl.Text = "💤 بانتظار طلب..."
+            cacheLbl.Text = "💾 " .. countDelivered() .. " مسلّم"
+            priceLbl.TextColor3 = Color3.fromRGB(100, 255, 150)
+            task.wait(CFG.IDLE_CHECK_INTERVAL)
+        else
+            mjWasVisible = true
+            local data = readMjDeliveryWithRetries()
+            if not data then 
+                stepLbl.Text = "⏳ قراءة..."
+                task.wait(0.3)
+            else
+                local content = (data.storeLine or "") .. "|" .. (data.priceLine or "")
+                local currentPrice = extractPrice(data.priceLine)
+                
+                if currentPrice then priceLbl.Text="💰 "..currentPrice; priceLbl.TextColor3=Color3.fromRGB(100,255,150) end
+                cleanHistory()
+                
+                local timeSinceLast = tick() - lastDeliveryTime
+                
+                if CFG.REQUIRE_PRICE and not currentPrice then
+                    stepLbl.Text="⚠️ لا يوجد سعر"; cooldown=tick()+1
+                elseif currentPrice and isPriceBlocked(currentPrice) then
+                    local rem = getPriceKeep() == math.huge and "∞" or math.floor(getPriceKeep()-(tick()-deliveredPrices[currentPrice])).."ث"
+                    stepLbl.Text="⏭️ نفس السعر - تخطي "..rem
+                    priceLbl.Text="💰 "..currentPrice.." ⛔"; priceLbl.TextColor3=Color3.fromRGB(255,100,100)
+                    cooldown=tick()+1
+                elseif isRecentlyDelivered(content) then
+                    stepLbl.Text="✅ مسلّم حديثاً"
+                    cacheLbl.Text="💾 مسلّم"; cooldown=tick()+0.5
+                elseif timeSinceLast < CFG.POST_DELIVERY_COOLDOWN then
+                    stepLbl.Text="⏳ تهدئة.."
+                elseif tick() < cooldown then
+                    stepLbl.Text="⏳ انتظار.."
+                else
+                    stepLbl.Text = currentPrice and "🆕 "..currentPrice or "🆕 طلب جديد"
+                    cacheLbl.Text = "🆕 تنفيذ"
+                    
+                    local ok = processOrder(content, currentPrice)
+                    if ok then
+                        if not hasMjDeliveryGui() then
+                            addDelivered(content, currentPrice)
+                            cacheLbl.Text="💾 "..countDelivered().." مسلّم"
+                            stepLbl.Text="🎉 تم!"
+                            botLbl.Text="🤖 جاهز"
+                            cooldown = tick() + CFG.POST_DELIVERY_COOLDOWN
+                        else
+                            stepLbl.Text="⚠️ الطلب باقي"; cooldown=tick()+2
+                        end
+                    else
+                        cooldown=tick()+2; stepLbl.Text="⚠️ فشل"
+                    end
+                end
+            end
+        end
+        task.wait(CFG.CHECK_INTERVAL)
+    end
+end
+
+-------------------------------------------------
+-- 🔁 Auto Accept
+-------------------------------------------------
+task.spawn(function()
+    task.wait(CFG.START_DELAY)
+    while true do
+        task.wait(0.8)
+        if autoAcceptRunning and autoRunning then
+            local buttons = getAllAcceptButtons()
+            if #buttons > 0 then
+                clickWithCamera(buttons[1].btn)
+                task.wait(CFG.CLICK_DELAY)
+            end
+        end
+    end
+end)
+
+-------------------------------------------------
+-- 🎯 Toggle
+-------------------------------------------------
+toggleBtn.MouseButton1Click:Connect(function()
+    autoRunning = not autoRunning
+    if autoRunning then
+        toggleBtn.Text="⏹️ إيقاف"; toggleBtn.BackgroundColor3=Color3.fromRGB(180,50,50)
+        statusLbl.Text="⚡ يعمل ✅"; statusLbl.TextColor3=Color3.fromRGB(180,100,255)
+        mapLbl.Text="🗺️ تحسين..."; mapLbl.TextColor3=Color3.fromRGB(255,220,120)
+        completed=0; countLbl.Text="🎯 المهام: 0"
+        cooldown=0; mjWasVisible=false; RESPAWN_FLAG=false; lastDeliveryTime=0
+        deliveredHistory={}; deliveredPrices={}
+        resetAll()
+        priceLbl.Text="💰 -"; priceLbl.TextColor3=Color3.fromRGB(100,255,150)
+        autoAcceptRunning=true
+        task.spawn(function() optimizeMap(); mapLbl.Text="✅ محسّن"; mapLbl.TextColor3=Color3.fromRGB(180,100,255) end)
+        if not loopRunning then task.spawn(function() loopRunning=true; deliveryLoop(); loopRunning=false end) end
+    else
+        toggleBtn.Text="🚚 تشغيل"; toggleBtn.BackgroundColor3=Color3.fromRGB(100,50,180)
+        statusLbl.Text="⚡ متوقف"; statusLbl.TextColor3=Color3.fromRGB(255,150,150)
+        stepLbl.Text="⏹️ توقف"
+        autoAcceptRunning=false; resetAll()
+    end
+end)`;
+
+    return new Response(luaCode, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache, no-store, must-revalidate"
+      }
+    });
+  }
+}
